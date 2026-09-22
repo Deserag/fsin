@@ -120,7 +120,7 @@ export class ImportsService {
 
     await this.prisma.importJob.update({
       where: { id: jobId },
-      data: { status: 'PREVIEW', validRows: valid.length, errorRows: errors.length },
+      data: { status: 'PREVIEW', validRows: valid.length, errorRows: errors.length, validData: valid },
     });
 
     return { jobId, totalRows: rows.length, validRows: valid.length, errorRows: errors.length, errors };
@@ -134,16 +134,58 @@ export class ImportsService {
     if (!job) throw new NotFoundException('Задание импорта не найдено');
     if (job.status !== 'PREVIEW') throw new BadRequestException('Импорт уже выполнен или не прошёл валидацию');
 
+    const validRows = (job.validData as any[]) ?? [];
+    if (validRows.length === 0) {
+      throw new BadRequestException('Нет валидных строк для импорта');
+    }
+
     await this.prisma.importJob.update({ where: { id: jobId }, data: { status: 'IMPORTING', confirmedAt: new Date() } });
 
-    // This would be done with actual rows from session/cache
-    // For now return confirmation
-    await this.prisma.importJob.update({
-      where: { id: jobId },
-      data: { status: 'COMPLETED', completedAt: new Date(), importedRows: job.validRows },
+    let importedRows = 0;
+    await this.prisma.$transaction(async (tx) => {
+      for (const row of validRows) {
+        const enrollmentDate = row.enrollmentYear ? new Date(`${row.enrollmentYear}-09-01`) : new Date();
+        const student = await tx.student.create({
+          data: {
+            organizationId,
+            lastName: String(row.lastName),
+            firstName: String(row.firstName),
+            middleName: row.middleName ? String(row.middleName) : null,
+            birthDate: row.birthDate ? new Date(row.birthDate) : null,
+            enrollmentDate,
+            currentCourse: row.currentCourse ? Number(row.currentCourse) : 1,
+            programId: row.programId ?? null,
+            statusId: row.statusId,
+            currentGroupId: row.groupId ?? null,
+          },
+        });
+
+        if (row.groupId) {
+          await tx.studentGroupHistory.create({
+            data: { studentId: student.id, groupId: row.groupId, joinDate: new Date() },
+          });
+        }
+
+        importedRows += 1;
+      }
+
+      await tx.auditLog.create({
+        data: {
+          organizationId,
+          userId,
+          action: 'IMPORT',
+          entityType: 'Student',
+          newValue: { jobId, importedRows },
+        },
+      });
     });
 
-    return { jobId, importedRows: job.validRows, errorRows: job.errorRows };
+    await this.prisma.importJob.update({
+      where: { id: jobId },
+      data: { status: 'COMPLETED', completedAt: new Date(), importedRows },
+    });
+
+    return { jobId, importedRows, errorRows: job.errorRows };
   }
 
   async getJob(jobId: string) {

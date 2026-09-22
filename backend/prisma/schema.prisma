@@ -558,6 +558,7 @@ model ImportJob {
   importedRows   Int?
   columnMapping  Json?          // сопоставление колонок
   previewData    Json?          // preview первых 10 строк
+  validData      Json?          // валидированные строки, готовые к импорту
   confirmedAt    DateTime?
   completedAt    DateTime?
   errorMessage   String?
