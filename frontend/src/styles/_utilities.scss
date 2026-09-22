@@ -3,26 +3,33 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
+  padding: 10px var(--space-4);
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   font-size: var(--font-size-md);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    opacity var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
 }
 
 .btn-primary {
-  background: var(--color-primary);
+  background: var(--gradient-brand);
   color: var(--color-text-inverse);
+  box-shadow: 0 6px 16px -4px rgba(109, 74, 255, 0.45);
 
   &:hover:not(:disabled) {
-    background: var(--color-primary-hover);
+    box-shadow: 0 10px 22px -4px rgba(109, 74, 255, 0.55);
+    transform: translateY(-1px);
   }
 }
 
@@ -33,25 +40,38 @@
 
   &:hover:not(:disabled) {
     border-color: var(--color-primary);
+    color: var(--color-primary);
   }
 }
 
 .btn-danger {
   background: var(--color-danger);
   color: var(--color-text-inverse);
+  box-shadow: 0 6px 16px -4px rgba(240, 68, 56, 0.4);
 
   &:hover:not(:disabled) {
-    opacity: 0.9;
+    opacity: 0.92;
   }
 }
 
 .btn-ghost {
   background: transparent;
   color: var(--color-text-secondary);
+  box-shadow: none;
 
   &:hover:not(:disabled) {
     background: var(--color-primary-soft);
     color: var(--color-primary);
+  }
+
+  &.btn-danger {
+    background: transparent;
+    color: var(--color-danger);
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      background: var(--color-danger-soft);
+    }
   }
 }
 
@@ -60,16 +80,18 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-base), transform var(--transition-base), border-color var(--transition-base);
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px var(--space-2);
+  padding: 3px var(--space-3);
   border-radius: 999px;
   font-size: var(--font-size-xs);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.6;
+  letter-spacing: 0.01em;
 }
 
 .badge-success {
@@ -100,7 +122,7 @@
   label {
     font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
-    font-weight: 500;
+    font-weight: 600;
   }
 
   input,
@@ -108,16 +130,17 @@
   textarea {
     font-family: inherit;
     font-size: var(--font-size-md);
-    padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--color-border-strong);
+    padding: 10px var(--space-3);
+    border: 1.5px solid var(--color-border-strong);
     border-radius: var(--radius-sm);
     background: var(--color-surface);
     color: var(--color-text-primary);
-    transition: border-color var(--transition-fast);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 
     &:focus {
       outline: none;
       border-color: var(--color-primary);
+      box-shadow: 0 0 0 4px var(--color-primary-soft);
     }
   }
 }
@@ -138,25 +161,6 @@
   }
 }
 
-.page-fade-in {
-  animation: page-fade-in var(--transition-base) ease-out;
-}
-
-@keyframes page-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.row-fade-in {
-  animation: page-fade-in 160ms ease-out;
-}
-
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -166,4 +170,30 @@
   padding: var(--space-7) var(--space-4);
   color: var(--color-text-secondary);
   text-align: center;
+}
+
+.page-fade-in {
+  animation: page-fade-in var(--transition-bounce) ease-out;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.row-fade-in {
+  animation: page-fade-in 180ms ease-out;
+}
+
+.text-gradient {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

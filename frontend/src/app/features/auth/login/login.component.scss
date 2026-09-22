@@ -3,21 +3,83 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(160deg, var(--color-primary) 0%, #1c3a8a 100%);
+  position: relative;
+  overflow: hidden;
+  background: var(--color-background);
   padding: var(--space-4);
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.55;
+    z-index: 0;
+  }
+
+  &::before {
+    width: 480px;
+    height: 480px;
+    top: -140px;
+    left: -120px;
+    background: linear-gradient(135deg, #6d4aff, #8b5cf6);
+  }
+
+  &::after {
+    width: 420px;
+    height: 420px;
+    bottom: -160px;
+    right: -100px;
+    background: linear-gradient(135deg, #ff5fa2, #ffa86b);
+  }
 }
 
 .login-card {
+  position: relative;
+  z-index: 1;
   width: 100%;
-  max-width: 380px;
-  padding: var(--space-6);
+  max-width: 400px;
+  padding: var(--space-6) var(--space-6) var(--space-5);
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glow);
+  backdrop-filter: blur(20px);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  animation: card-in var(--transition-bounce);
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .login-header {
   text-align: center;
+
+  .brand-badge {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto var(--space-4);
+    border-radius: var(--radius-sm);
+    background: var(--gradient-brand);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    box-shadow: 0 8px 20px -6px rgba(109, 74, 255, 0.55);
+  }
 
   h1 {
     font-size: var(--font-size-xl);
@@ -40,6 +102,8 @@
 .login-submit {
   margin-top: var(--space-2);
   width: 100%;
+  padding: 12px;
+  font-size: var(--font-size-md);
 }
 
 .login-error {
@@ -48,4 +112,5 @@
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
+  font-weight: 600;
 }
