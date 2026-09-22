@@ -12,6 +12,26 @@ export interface StudentsQuery {
   search?: string;
 }
 
+export interface CourseTransitionPreview {
+  transitions: {
+    studentId: string;
+    studentName: string;
+    fromCourse: number;
+    toCourse: number | null;
+    action: 'PROMOTE' | 'GRADUATE' | 'SKIP';
+    reason?: string;
+  }[];
+  summary: {
+    total: number;
+    toPromote: number;
+    toGraduate: number;
+    toSkip: number;
+    byTransition: Record<string, number>;
+  };
+}
+
+const base = environment.apiUrl;
+
 @Injectable({ providedIn: 'root' })
 export class StudentsService {
   constructor(private readonly http: HttpClient) {}
@@ -22,10 +42,30 @@ export class StudentsService {
     if (query.limit) params['limit'] = String(query.limit);
     if (query.groupId) params['groupId'] = query.groupId;
     if (query.search) params['search'] = query.search;
-    return this.http.get<Paginated<Student>>(`${environment.apiUrl}/students`, { params });
+    return this.http.get<Paginated<Student>>(`${base}/students`, { params });
   }
 
   get(id: string): Observable<Student> {
-    return this.http.get<Student>(`${environment.apiUrl}/students/${id}`);
+    return this.http.get<Student>(`${base}/students/${id}`);
+  }
+
+  create(dto: Record<string, unknown>): Observable<Student> {
+    return this.http.post<Student>(`${base}/students`, dto);
+  }
+
+  update(id: string, dto: Record<string, unknown>): Observable<Student> {
+    return this.http.patch<Student>(`${base}/students/${id}`, dto);
+  }
+
+  history(id: string): Observable<unknown> {
+    return this.http.get(`${base}/students/${id}/history`);
+  }
+
+  previewCourseTransition(): Observable<CourseTransitionPreview> {
+    return this.http.get<CourseTransitionPreview>(`${base}/students/course-transition/preview`);
+  }
+
+  executeCourseTransition(): Observable<unknown> {
+    return this.http.post(`${base}/students/course-transition/execute`, { confirmed: true });
   }
 }

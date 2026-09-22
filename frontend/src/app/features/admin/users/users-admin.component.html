@@ -1,0 +1,149 @@
+<div class="users-page page-fade-in">
+  <div class="page-header">
+    <h2>Пользователи</h2>
+    <div class="page-header-actions">
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Поиск…"
+        [ngModel]="search()"
+        (ngModelChange)="onSearchChange($event)"
+      />
+      <button type="button" class="btn btn-primary" (click)="openCreate()">+ Новый пользователь</button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="card skeleton" style="height: 400px"></div>
+  } @else {
+    <div class="card users-table">
+      <table>
+        <thead>
+          <tr>
+            <th>ФИО</th>
+            <th>Email</th>
+            <th>Роль</th>
+            <th>Доступ</th>
+            <th>Статус</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (u of users(); track u.id) {
+            <tr class="row-fade-in">
+              <td>{{ u.lastName }} {{ u.firstName }} {{ u.middleName }}</td>
+              <td>{{ u.email }}</td>
+              <td>{{ roleLabel(u) }}</td>
+              <td>
+                @if (u.groupScopes.length) {
+                  <span class="badge badge-neutral">{{ u.groupScopes.length }} гр.</span>
+                }
+                @if (u.directionScopes.length) {
+                  <span class="badge badge-neutral">{{ u.directionScopes.length }} напр.</span>
+                }
+              </td>
+              <td>
+                @if (u.isBlocked) {
+                  <span class="badge badge-danger">Заблокирован</span>
+                } @else {
+                  <span class="badge badge-success">Активен</span>
+                }
+              </td>
+              <td class="actions-col">
+                <button type="button" class="btn btn-ghost" (click)="openEdit(u)">Изменить</button>
+                <button type="button" class="btn btn-ghost" [class.btn-danger]="!u.isBlocked" (click)="toggleBlock(u)">
+                  {{ u.isBlocked ? 'Разблокировать' : 'Заблокировать' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (users().length === 0) {
+        <div class="empty-state">
+          <p>Пользователи не найдены</p>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+@if (modalOpen()) {
+  <app-modal [title]="form().id ? 'Редактирование пользователя' : 'Новый пользователь'" width="560px" (closed)="closeModal()">
+    <div class="user-form">
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Фамилия *</label>
+          <input type="text" [ngModel]="form().lastName" (ngModelChange)="updateField('lastName', $event)" />
+        </div>
+        <div class="form-field">
+          <label>Имя *</label>
+          <input type="text" [ngModel]="form().firstName" (ngModelChange)="updateField('firstName', $event)" />
+        </div>
+        <div class="form-field">
+          <label>Отчество</label>
+          <input type="text" [ngModel]="form().middleName" (ngModelChange)="updateField('middleName', $event)" />
+        </div>
+        <div class="form-field">
+          <label>Телефон</label>
+          <input type="text" [ngModel]="form().phone" (ngModelChange)="updateField('phone', $event)" />
+        </div>
+
+        @if (!form().id) {
+          <div class="form-field">
+            <label>Email *</label>
+            <input type="email" [ngModel]="form().email" (ngModelChange)="updateField('email', $event)" />
+          </div>
+          <div class="form-field">
+            <label>Пароль *</label>
+            <input type="password" [ngModel]="form().password" (ngModelChange)="updateField('password', $event)" />
+          </div>
+        }
+      </div>
+
+      <div class="form-field">
+        <label>Роли</label>
+        <div class="checkbox-list">
+          @for (r of roles(); track r.id) {
+            <label class="checkbox-item">
+              <input type="checkbox" [checked]="form().roleIds.includes(r.id)" (change)="toggleRole(r.id)" />
+              {{ r.displayName }}
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label>Доступ к группам (для старшин)</label>
+        <div class="checkbox-list scrollable">
+          @for (g of groups(); track g.id) {
+            <label class="checkbox-item">
+              <input type="checkbox" [checked]="form().groupScopeIds.includes(g.id)" (change)="toggleGroupScope(g.id)" />
+              {{ g.name }}
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label>Доступ к направлениям (для руководителей)</label>
+        <div class="checkbox-list">
+          @for (d of directions(); track d.id) {
+            <label class="checkbox-item">
+              <input type="checkbox" [checked]="form().directionScopeIds.includes(d.id)" (change)="toggleDirectionScope(d.id)" />
+              {{ d.name }}
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeModal()">Отмена</button>
+        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
+          {{ saving() ? 'Сохранение…' : 'Сохранить' }}
+        </button>
+      </div>
+    </div>
+  </app-modal>
+}

@@ -1,0 +1,11 @@
+@if (confirmService.request(); as req) {
+  <app-modal [title]="req.title" width="400px" (closed)="cancel()">
+    <p class="confirm-message">{{ req.message }}</p>
+    <div class="confirm-actions">
+      <button type="button" class="btn btn-secondary" (click)="cancel()">Отмена</button>
+      <button type="button" class="btn" [class.btn-danger]="req.danger" [class.btn-primary]="!req.danger" (click)="confirm()">
+        {{ req.confirmLabel ?? 'Подтвердить' }}
+      </button>
+    </div>
+  </app-modal>
+}

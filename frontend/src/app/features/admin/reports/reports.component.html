@@ -1,0 +1,79 @@
+<div class="reports-page page-fade-in">
+  <div class="page-header">
+    <h2>Отчёты</h2>
+    <button type="button" class="btn btn-secondary" (click)="exportStudents()">Экспорт студентов (.xlsx)</button>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab" [class.active]="tab() === 'summary'" (click)="setTab('summary')">Сводный отчёт</button>
+    <button type="button" class="tab" [class.active]="tab() === 'group'" (click)="setTab('group')">По группе</button>
+  </div>
+
+  @if (loading()) {
+    <div class="card skeleton" style="height: 320px"></div>
+  } @else {
+    @if (tab() === 'summary' && summary(); as s) {
+      <div class="summary-totals card">
+        <div class="total-item"><span class="value">{{ s.totals.groupCount }}</span><span class="label">Групп</span></div>
+        <div class="total-item"><span class="value">{{ s.totals.totalRecords }}</span><span class="label">Записей явки</span></div>
+        <div class="total-item"><span class="value">{{ s.totals.avgAttendanceRate ?? '—' }}%</span><span class="label">Средняя посещаемость</span></div>
+      </div>
+
+      <div class="card summary-table">
+        <table>
+          <thead>
+            <tr><th>Группа</th><th>Направление</th><th>Студентов</th><th>Табелей</th><th>Посещаемость</th></tr>
+          </thead>
+          <tbody>
+            @for (g of s.groups; track g.id) {
+              <tr class="row-fade-in">
+                <td>{{ g.name }}</td>
+                <td>{{ g.direction?.name ?? '—' }}</td>
+                <td>{{ g.studentCount }}</td>
+                <td>{{ g.totalSheets }}</td>
+                <td>
+                  @if (g.attendanceRate !== null) {
+                    <span class="badge" [class.badge-success]="g.attendanceRate >= 80" [class.badge-warning]="g.attendanceRate < 80">
+                      {{ g.attendanceRate }}%
+                    </span>
+                  } @else { — }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (tab() === 'group') {
+      <div class="group-filter form-field">
+        <label>Группа</label>
+        <select [ngModel]="selectedGroupId()" (ngModelChange)="onGroupChange($event)">
+          @for (g of groups(); track g.id) {
+            <option [value]="g.id">{{ g.name }}</option>
+          }
+        </select>
+      </div>
+
+      @if (groupReport(); as gr) {
+        <div class="summary-totals card">
+          <div class="total-item"><span class="value">{{ gr.summary.totalSheets }}</span><span class="label">Табелей</span></div>
+          <div class="total-item"><span class="value">{{ gr.summary.presentRecords }}</span><span class="label">Присутствий</span></div>
+          <div class="total-item"><span class="value">{{ gr.summary.absentRecords }}</span><span class="label">Отсутствий</span></div>
+          <div class="total-item"><span class="value">{{ gr.summary.attendanceRate }}%</span><span class="label">Посещаемость</span></div>
+        </div>
+
+        @if (reasonEntries(gr.summary.reasonBreakdown).length > 0) {
+          <div class="card reasons-card">
+            <h3>Причины отсутствия</h3>
+            <div class="reasons-list">
+              @for (entry of reasonEntries(gr.summary.reasonBreakdown); track entry[0]) {
+                <span class="badge badge-neutral">{{ entry[0] }}: {{ entry[1] }}</span>
+              }
+            </div>
+          </div>
+        }
+      }
+    }
+  }
+</div>

@@ -1,9 +1,9 @@
 <div class="shell">
   <aside class="sidebar">
-    <div class="brand">
+    <a routerLink="/dashboard" class="brand">
       <span class="brand-mark">ФСИН</span>
       <span class="brand-text">Контингент</span>
-    </div>
+    </a>
 
     <nav class="nav">
       <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Главная</a>
@@ -15,6 +15,18 @@
       @if (auth.isAdmin() || auth.isManager()) {
         <a routerLink="/students" routerLinkActive="active" class="nav-link">Студенты</a>
         <a routerLink="/groups" routerLinkActive="active" class="nav-link">Группы</a>
+        <a routerLink="/reports" routerLinkActive="active" class="nav-link">Отчёты</a>
+      }
+
+      @if (auth.isAdmin()) {
+        <div class="nav-section-label">Администрирование</div>
+        <a routerLink="/admin/users" routerLinkActive="active" class="nav-link">Пользователи</a>
+        <a routerLink="/admin/roles" routerLinkActive="active" class="nav-link">Роли и права</a>
+        <a routerLink="/admin/reference" routerLinkActive="active" class="nav-link">Справочники</a>
+        <a routerLink="/admin/imports" routerLinkActive="active" class="nav-link">Импорт Excel</a>
+        <a routerLink="/admin/course-transition" routerLinkActive="active" class="nav-link">Перевод курса</a>
+        <a routerLink="/admin/organization" routerLinkActive="active" class="nav-link">Организация</a>
+        <a routerLink="/admin/audit" routerLinkActive="active" class="nav-link">Журнал аудита</a>
       }
     </nav>
   </aside>

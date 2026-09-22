@@ -22,8 +22,8 @@ export class UsersController {
   }
 
   @Post()
-  create(@Body() dto: any, @CurrentUser('id') userId: string) {
-    return this.usersService.create(dto, userId);
+  create(@Body() dto: any, @CurrentUser('organizationId') orgId: string, @CurrentUser('id') userId: string) {
+    return this.usersService.create({ ...dto, organizationId: orgId }, userId);
   }
 
   @Patch(':id')

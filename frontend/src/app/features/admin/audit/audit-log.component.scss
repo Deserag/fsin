@@ -1,0 +1,19 @@
+@use 'styles/admin-shared' as admin;
+
+h2 {
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--space-4);
+}
+
+.audit-table {
+  @include admin.data-table;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}

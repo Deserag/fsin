@@ -1,0 +1,71 @@
+<div class="transition-page page-fade-in">
+  <div class="page-header">
+    <h2>Автоматический перевод курса</h2>
+    <button type="button" class="btn btn-secondary" (click)="loadPreview()">Обновить предпросмотр</button>
+  </div>
+
+  @if (loading()) {
+    <div class="card skeleton" style="height: 300px"></div>
+  } @else if (preview()) {
+    @let p = preview()!;
+    <div class="summary-row">
+      <div class="card summary-card">
+        <span class="stat-value">{{ p.summary.toPromote }}</span>
+        <span class="stat-label">Будут переведены на след. курс</span>
+      </div>
+      <div class="card summary-card">
+        <span class="stat-value">{{ p.summary.toGraduate }}</span>
+        <span class="stat-label">Завершат обучение</span>
+      </div>
+      <div class="card summary-card">
+        <span class="stat-value">{{ p.summary.toSkip }}</span>
+        <span class="stat-label">Пропущены (нет курса/программы)</span>
+      </div>
+    </div>
+
+    @if (p.transitions.length > 0) {
+      <div class="card transitions-breakdown">
+        @for (entry of p.summary.byTransition | keyvalue; track entry.key) {
+          <span class="badge badge-neutral">{{ entry.key }}: {{ entry.value }}</span>
+        }
+      </div>
+    }
+
+    <div class="actions-row">
+      <button type="button" class="btn btn-primary" [disabled]="executing() || p.transitions.length === 0" (click)="execute()">
+        {{ executing() ? 'Выполнение…' : 'Выполнить перевод' }}
+      </button>
+      @if (executed()) {
+        <span class="badge badge-success">Выполнено</span>
+      }
+    </div>
+
+    <div class="card transitions-table">
+      <table>
+        <thead>
+          <tr><th>Студент</th><th>Курс</th><th>Действие</th><th>Примечание</th></tr>
+        </thead>
+        <tbody>
+          @for (t of p.transitions; track t.studentId) {
+            <tr class="row-fade-in">
+              <td>{{ t.studentName }}</td>
+              <td>{{ t.fromCourse }} → {{ t.toCourse ?? '—' }}</td>
+              <td>
+                <span class="badge" [class.badge-success]="t.action === 'PROMOTE'" [class.badge-warning]="t.action === 'GRADUATE'" [class.badge-neutral]="t.action === 'SKIP'">
+                  {{ actionLabel(t.action) }}
+                </span>
+              </td>
+              <td class="text-muted">{{ t.reason ?? '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (p.transitions.length === 0) {
+        <div class="empty-state">
+          <p>Нет студентов для перевода</p>
+        </div>
+      }
+    </div>
+  }
+</div>

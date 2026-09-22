@@ -1,0 +1,34 @@
+@use 'styles/admin-shared' as admin;
+
+.page-header {
+  @include admin.page-header;
+  margin-bottom: var(--space-4);
+}
+
+.permissions-table {
+  @include admin.data-table;
+
+  .module-row td {
+    background: var(--color-background);
+    font-weight: 600;
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-secondary);
+  }
+
+  .role-col {
+    text-align: center;
+    width: 120px;
+  }
+
+  .perm-name {
+    white-space: nowrap;
+  }
+
+  input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+}

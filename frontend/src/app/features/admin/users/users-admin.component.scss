@@ -1,0 +1,42 @@
+@use 'styles/admin-shared' as admin;
+
+.page-header {
+  @include admin.page-header;
+}
+
+.page-header-actions {
+  @include admin.page-header-actions;
+}
+
+.search-input {
+  @include admin.search-input;
+}
+
+.users-table {
+  @include admin.data-table;
+  margin-top: var(--space-4);
+}
+
+.actions-col {
+  @include admin.actions-col;
+}
+
+.form-grid {
+  @include admin.form-grid;
+}
+
+.checkbox-list {
+  @include admin.checkbox-list;
+}
+
+.checkbox-item {
+  @include admin.checkbox-item;
+}
+
+.modal-actions {
+  @include admin.modal-actions;
+}
+
+.user-form .form-field {
+  margin-bottom: var(--space-3);
+}

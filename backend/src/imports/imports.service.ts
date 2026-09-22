@@ -34,7 +34,8 @@ export class ImportsService {
       }
     });
 
-    // Create import job
+    // Create import job — store the FULL parsed row set so later steps never
+    // operate on a truncated subset (only previewData is capped, for display).
     const job = await this.prisma.importJob.create({
       data: {
         organizationId,
@@ -43,6 +44,7 @@ export class ImportsService {
         status: 'PARSING',
         totalRows: rows.length,
         previewData: rows.slice(0, 10),
+        rawData: rows,
       },
     });
 
@@ -57,10 +59,11 @@ export class ImportsService {
     return { jobId, mapping };
   }
 
-  async validate(jobId: string, rows: any[], organizationId: string) {
+  async validate(jobId: string, organizationId: string) {
     const job = await this.prisma.importJob.findUnique({ where: { id: jobId } });
     if (!job) throw new NotFoundException('Задание импорта не найдено');
 
+    const rows = (job.rawData as any[]) ?? [];
     const mapping = job.columnMapping as Record<string, string>;
     const errors: Array<{ row: number; field: string; message: string; value: string }> = [];
     const valid: any[] = [];

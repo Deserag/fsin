@@ -1,0 +1,26 @@
+<div class="org-page page-fade-in">
+  <h2>Организация</h2>
+
+  @if (loading()) {
+    <div class="card skeleton" style="height: 200px"></div>
+  } @else if (org()) {
+    @let o = org()!;
+    <div class="card org-form">
+      <div class="form-field">
+        <label>Полное название</label>
+        <input type="text" [ngModel]="o.name" (ngModelChange)="update('name', $event)" />
+      </div>
+      <div class="form-field">
+        <label>Краткое название</label>
+        <input type="text" [ngModel]="o.shortName" (ngModelChange)="update('shortName', $event)" />
+      </div>
+      <div class="form-field">
+        <label>Код</label>
+        <input type="text" [ngModel]="o.code" (ngModelChange)="update('code', $event)" />
+      </div>
+      <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
+        {{ saving() ? 'Сохранение…' : 'Сохранить' }}
+      </button>
+    </div>
+  }
+</div>

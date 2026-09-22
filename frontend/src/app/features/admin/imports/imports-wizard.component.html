@@ -1,0 +1,88 @@
+<div class="import-page page-fade-in">
+  <div class="page-header">
+    <h2>Импорт студентов из Excel</h2>
+    <button type="button" class="btn btn-secondary" (click)="downloadTemplate()">Скачать шаблон</button>
+  </div>
+
+  <div class="steps">
+    <span class="step" [class.active]="step() === 'upload'">1. Загрузка</span>
+    <span class="step" [class.active]="step() === 'mapping'">2. Сопоставление колонок</span>
+    <span class="step" [class.active]="step() === 'preview'">3. Проверка и подтверждение</span>
+    <span class="step" [class.active]="step() === 'done'">4. Итог</span>
+  </div>
+
+  @switch (step()) {
+    @case ('upload') {
+      <div class="card step-card">
+        <p class="hint">Загрузите файл .xlsx, заполненный по шаблону. Колонки можно будет сопоставить на следующем шаге.</p>
+        <input type="file" accept=".xlsx" (change)="onFileSelected($event)" />
+        <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="upload()">
+          {{ busy() ? 'Загрузка…' : 'Загрузить и распознать' }}
+        </button>
+      </div>
+    }
+
+    @case ('mapping') {
+      @if (parseResult(); as pr) {
+        <div class="card step-card">
+          <p class="hint">Файл распознан: {{ pr.totalRows }} строк. Сопоставьте колонки файла с полями системы.</p>
+          <div class="mapping-grid">
+            @for (f of fields; track f.key) {
+              <div class="form-field">
+                <label>{{ f.label }}</label>
+                <select [ngModel]="mapping()[f.key]" (ngModelChange)="updateMapping(f.key, $event)">
+                  <option value="">— не сопоставлено —</option>
+                  @for (h of pr.headers; track h) {
+                    <option [value]="h">{{ h }}</option>
+                  }
+                </select>
+              </div>
+            }
+          </div>
+          <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="confirmMapping()">
+            {{ busy() ? 'Проверка…' : 'Проверить данные' }}
+          </button>
+        </div>
+      }
+    }
+
+    @case ('preview') {
+      @if (validateResult(); as v) {
+        <div class="card step-card">
+          <div class="validate-summary">
+            <span class="badge badge-success">Будет импортировано: {{ v.validRows }}</span>
+            @if (v.errorRows > 0) {
+              <span class="badge badge-danger">Ошибок: {{ v.errorRows }}</span>
+            }
+          </div>
+
+          @if (v.errors.length > 0) {
+            <div class="errors-table">
+              <table>
+                <thead><tr><th>Строка</th><th>Поле</th><th>Ошибка</th><th>Значение</th></tr></thead>
+                <tbody>
+                  @for (e of v.errors; track e.row + e.field) {
+                    <tr><td>{{ e.row }}</td><td>{{ e.field }}</td><td>{{ e.message }}</td><td>{{ e.value }}</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          <button type="button" class="btn btn-primary" [disabled]="busy() || v.validRows === 0" (click)="confirmImport()">
+            {{ busy() ? 'Импорт…' : 'Подтвердить импорт (' + v.validRows + ')' }}
+          </button>
+          <button type="button" class="btn btn-ghost" (click)="restart()">Начать заново</button>
+        </div>
+      }
+    }
+
+    @case ('done') {
+      <div class="card step-card done-card">
+        <div class="done-icon">✓</div>
+        <p>Импортировано студентов: {{ importedRows() }}</p>
+        <button type="button" class="btn btn-primary" (click)="restart()">Новый импорт</button>
+      </div>
+    }
+  }
+</div>

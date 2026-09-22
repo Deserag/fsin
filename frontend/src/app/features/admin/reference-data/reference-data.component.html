@@ -1,0 +1,158 @@
+<div class="reference-page page-fade-in">
+  <div class="page-header">
+    <h2>Справочники</h2>
+    <button type="button" class="btn btn-primary" (click)="openCreate()">+ Добавить</button>
+  </div>
+
+  <div class="tabs">
+    @for (tab of tabs; track tab.key) {
+      <button type="button" class="tab" [class.active]="activeTab() === tab.key" (click)="setTab(tab.key)">
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="card skeleton" style="height: 320px"></div>
+  } @else {
+    <div class="card ref-table">
+      @switch (activeTab()) {
+        @case ('directions') {
+          <table>
+            <thead><tr><th>Код</th><th>Название</th><th>Кратко</th><th>Статус</th></tr></thead>
+            <tbody>
+              @for (d of directions(); track d.id) {
+                <tr class="row-fade-in">
+                  <td>{{ d.code }}</td><td>{{ d.name }}</td><td>{{ d.shortName }}</td>
+                  <td><span class="badge" [class.badge-success]="d.isActive" [class.badge-neutral]="!d.isActive">{{ d.isActive ? 'Активно' : 'Отключено' }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+        @case ('programs') {
+          <table>
+            <thead><tr><th>Код</th><th>Название</th><th>Направление</th><th>Срок обучения</th></tr></thead>
+            <tbody>
+              @for (p of programs(); track p.id) {
+                <tr class="row-fade-in">
+                  <td>{{ p.code }}</td><td>{{ p.name }}</td><td>{{ p.direction?.name ?? directionName(p.directionId) }}</td><td>{{ p.durationYears }} лет</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+        @case ('academicYears') {
+          <table>
+            <thead><tr><th>Название</th><th>Начало</th><th>Конец</th><th>Текущий</th><th></th></tr></thead>
+            <tbody>
+              @for (y of academicYears(); track y.id) {
+                <tr class="row-fade-in">
+                  <td>{{ y.name }}</td><td>{{ y.startDate | date: 'dd.MM.yyyy' }}</td><td>{{ y.endDate | date: 'dd.MM.yyyy' }}</td>
+                  <td>@if (y.isCurrent) { <span class="badge badge-success">Текущий</span> }</td>
+                  <td>
+                    @if (!y.isCurrent) {
+                      <button type="button" class="btn btn-ghost" (click)="setCurrentYear(y.id)">Сделать текущим</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+        @case ('statuses') {
+          <table>
+            <thead><tr><th>Код</th><th>Название</th><th>Финальный</th></tr></thead>
+            <tbody>
+              @for (s of statuses(); track s.id) {
+                <tr class="row-fade-in">
+                  <td>{{ s.code }}</td><td>{{ s.name }}</td>
+                  <td>@if (s.isTerminal) { <span class="badge badge-warning">Да</span> } @else { — }</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+        @case ('periods') {
+          <table>
+            <thead><tr><th>Код</th><th>Название</th><th>Начало</th><th>Конец</th></tr></thead>
+            <tbody>
+              @for (p of periods(); track p.id) {
+                <tr class="row-fade-in">
+                  <td>{{ p.code }}</td><td>{{ p.name }}</td><td>{{ p.startTime }}</td><td>{{ p.endTime }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+        @case ('reasons') {
+          <table>
+            <thead><tr><th>Код</th><th>Название</th><th>Комментарий обязателен</th></tr></thead>
+            <tbody>
+              @for (r of reasons(); track r.id) {
+                <tr class="row-fade-in">
+                  <td>{{ r.code }}</td><td>{{ r.name }}</td>
+                  <td>@if (r.requiresNote) { <span class="badge badge-warning">Да</span> } @else { — }</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      }
+    </div>
+  }
+</div>
+
+@if (modalOpen()) {
+  <app-modal title="Добавить запись" width="480px" (closed)="closeModal()">
+    <div class="ref-form">
+      @switch (activeTab()) {
+        @case ('directions') {
+          <div class="form-field"><label>Код *</label><input type="text" [ngModel]="form()['code']" (ngModelChange)="updateForm('code', $event)" /></div>
+          <div class="form-field"><label>Название *</label><input type="text" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
+          <div class="form-field"><label>Краткое название</label><input type="text" [ngModel]="form()['shortName']" (ngModelChange)="updateForm('shortName', $event)" /></div>
+        }
+        @case ('programs') {
+          <div class="form-field"><label>Код *</label><input type="text" [ngModel]="form()['code']" (ngModelChange)="updateForm('code', $event)" /></div>
+          <div class="form-field"><label>Название *</label><input type="text" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
+          <div class="form-field">
+            <label>Направление *</label>
+            <select [ngModel]="form()['directionId']" (ngModelChange)="updateForm('directionId', $event)">
+              <option [value]="null" disabled selected>Выберите…</option>
+              @for (d of directions(); track d.id) { <option [value]="d.id">{{ d.name }}</option> }
+            </select>
+          </div>
+          <div class="form-field"><label>Срок обучения (лет) *</label><input type="number" min="1" max="10" [ngModel]="form()['durationYears']" (ngModelChange)="updateForm('durationYears', $event)" /></div>
+        }
+        @case ('academicYears') {
+          <div class="form-field"><label>Название *</label><input type="text" placeholder="2026-2027" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
+          <div class="form-field"><label>Начало *</label><input type="date" [ngModel]="form()['startDate']" (ngModelChange)="updateForm('startDate', $event)" /></div>
+          <div class="form-field"><label>Конец *</label><input type="date" [ngModel]="form()['endDate']" (ngModelChange)="updateForm('endDate', $event)" /></div>
+        }
+        @case ('statuses') {
+          <div class="form-field"><label>Код *</label><input type="text" [ngModel]="form()['code']" (ngModelChange)="updateForm('code', $event)" /></div>
+          <div class="form-field"><label>Название *</label><input type="text" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
+          <label class="checkbox-item"><input type="checkbox" [ngModel]="form()['isTerminal']" (ngModelChange)="updateForm('isTerminal', $event)" /> Финальный статус (отчисление/выпуск)</label>
+        }
+        @case ('periods') {
+          <div class="form-field"><label>Код *</label><input type="text" [ngModel]="form()['code']" (ngModelChange)="updateForm('code', $event)" /></div>
+          <div class="form-field"><label>Название *</label><input type="text" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
+          <div class="form-field"><label>Начало</label><input type="time" [ngModel]="form()['startTime']" (ngModelChange)="updateForm('startTime', $event)" /></div>
+          <div class="form-field"><label>Конец</label><input type="time" [ngModel]="form()['endTime']" (ngModelChange)="updateForm('endTime', $event)" /></div>
+        }
+        @case ('reasons') {
+          <div class="form-field"><label>Код *</label><input type="text" [ngModel]="form()['code']" (ngModelChange)="updateForm('code', $event)" /></div>
+          <div class="form-field"><label>Название *</label><input type="text" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
+          <label class="checkbox-item"><input type="checkbox" [ngModel]="form()['requiresNote']" (ngModelChange)="updateForm('requiresNote', $event)" /> Требует комментария</label>
+        }
+      }
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeModal()">Отмена</button>
+        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
+          {{ saving() ? 'Сохранение…' : 'Сохранить' }}
+        </button>
+      </div>
+    </div>
+  </app-modal>
+}

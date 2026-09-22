@@ -1,0 +1,37 @@
+<div class="audit-page page-fade-in">
+  <h2>Журнал аудита</h2>
+
+  @if (loading()) {
+    <div class="card skeleton" style="height: 400px"></div>
+  } @else {
+    <div class="card audit-table">
+      <table>
+        <thead>
+          <tr><th>Дата/время</th><th>Пользователь</th><th>Действие</th><th>Объект</th></tr>
+        </thead>
+        <tbody>
+          @for (e of entries(); track e.id) {
+            <tr class="row-fade-in">
+              <td>{{ e.createdAt | date: 'dd.MM.yyyy HH:mm:ss' }}</td>
+              <td>{{ e.user ? (e.user.lastName + ' ' + e.user.firstName) : 'Система' }}</td>
+              <td><span class="badge badge-neutral">{{ actionLabel(e.action) }}</span></td>
+              <td>{{ entityLabel(e.entityType) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (entries().length === 0) {
+        <div class="empty-state">
+          <p>Записей нет</p>
+        </div>
+      }
+    </div>
+
+    <div class="pagination">
+      <button type="button" class="btn btn-secondary" [disabled]="page() === 1" (click)="prevPage()">Назад</button>
+      <span>Стр. {{ page() }} из {{ totalPages() }}</span>
+      <button type="button" class="btn btn-secondary" [disabled]="page() === totalPages()" (click)="nextPage()">Вперёд</button>
+    </div>
+  }
+</div>

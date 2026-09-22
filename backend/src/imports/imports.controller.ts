@@ -35,8 +35,8 @@ export class ImportsController {
   }
 
   @Post('students/validate')
-  validate(@Body('jobId') jobId: string, @Body('rows') rows: any[], @CurrentUser('organizationId') o: string) {
-    return this.service.validate(jobId, rows, o);
+  validate(@Body('jobId') jobId: string, @CurrentUser('organizationId') o: string) {
+    return this.service.validate(jobId, o);
   }
 
   @Post('students/confirm')

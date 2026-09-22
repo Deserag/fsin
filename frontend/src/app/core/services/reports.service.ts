@@ -35,11 +35,56 @@ export interface DashboardData {
   todaySheets: DashboardSheet[];
 }
 
+export interface GroupReport {
+  group: { id: string; name: string; direction?: { name: string }; program?: { name: string } };
+  summary: {
+    totalSheets: number;
+    totalRecords: number;
+    presentRecords: number;
+    absentRecords: number;
+    attendanceRate: number;
+    reasonBreakdown: Record<string, number>;
+  };
+}
+
+export interface SummaryReportGroup {
+  id: string;
+  name: string;
+  direction?: { name: string } | null;
+  program?: { name: string } | null;
+  studentCount: number;
+  totalSheets: number;
+  totalRecords: number;
+  presentRecords: number;
+  absentRecords: number;
+  attendanceRate: number | null;
+}
+
+export interface SummaryReport {
+  period: { dateFrom?: string; dateTo?: string };
+  groups: SummaryReportGroup[];
+  totals: {
+    groupCount: number;
+    totalRecords: number;
+    presentRecords: number;
+    absentRecords: number;
+    avgAttendanceRate: number | null;
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class ReportsService {
   constructor(private readonly http: HttpClient) {}
 
   dashboard(): Observable<DashboardData> {
     return this.http.get<DashboardData>(`${environment.apiUrl}/reports/dashboard`);
+  }
+
+  groupReport(groupId: string, params: Record<string, string> = {}): Observable<GroupReport> {
+    return this.http.get<GroupReport>(`${environment.apiUrl}/reports/group/${groupId}`, { params });
+  }
+
+  summaryReport(params: Record<string, string> = {}): Observable<SummaryReport> {
+    return this.http.get<SummaryReport>(`${environment.apiUrl}/reports/summary`, { params });
   }
 }

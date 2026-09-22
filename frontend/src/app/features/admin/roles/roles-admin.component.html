@@ -1,0 +1,44 @@
+<div class="roles-page page-fade-in">
+  <div class="page-header">
+    <h2>Роли и права</h2>
+  </div>
+
+  @if (loading()) {
+    <div class="card skeleton" style="height: 400px"></div>
+  } @else {
+    <div class="card permissions-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Право</th>
+            @for (role of roles(); track role.id) {
+              <th class="role-col">{{ role.displayName }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (module of modules(); track module) {
+            <tr class="module-row">
+              <td [attr.colspan]="roles().length + 1">{{ module }}</td>
+            </tr>
+            @for (perm of modulePermissions(module); track perm.id) {
+              <tr>
+                <td class="perm-name">{{ perm.displayName }}</td>
+                @for (role of roles(); track role.id) {
+                  <td class="role-col">
+                    <input
+                      type="checkbox"
+                      [checked]="hasPermission(role, perm.id)"
+                      [disabled]="isPending(role.id, perm.id)"
+                      (change)="toggle(role, perm)"
+                    />
+                  </td>
+                }
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
