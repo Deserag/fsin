@@ -1,0 +1,21 @@
+{
+  "name": "fsin-crm",
+  "version": "1.0.0",
+  "description": "ИС учета контингента и посещаемости образовательной организации УИС",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:frontend": "cd frontend && npm start",
+    "install:all": "npm run install:backend && npm run install:frontend",
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "migrate": "cd backend && npx prisma migrate dev",
+    "seed": "cd backend && npm run seed",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

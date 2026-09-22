@@ -1,0 +1,28 @@
+<div class="login-page">
+  <div class="login-card card">
+    <div class="login-header">
+      <h1>ИС учёта контингента</h1>
+      <p>Воронежский институт ФСИН России</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
+      <div class="form-field">
+        <label for="email">Электронная почта</label>
+        <input id="email" type="email" formControlName="email" placeholder="user@vifsin.ru" autocomplete="username" />
+      </div>
+
+      <div class="form-field">
+        <label for="password">Пароль</label>
+        <input id="password" type="password" formControlName="password" autocomplete="current-password" />
+      </div>
+
+      @if (error()) {
+        <div class="login-error">{{ error() }}</div>
+      }
+
+      <button type="submit" class="btn btn-primary login-submit" [disabled]="loading()">
+        {{ loading() ? 'Вход…' : 'Войти' }}
+      </button>
+    </form>
+  </div>
+</div>

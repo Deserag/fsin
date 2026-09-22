@@ -1,0 +1,25 @@
+<div class="groups-page">
+  <h2>Группы</h2>
+
+  @if (loading()) {
+    <div class="card skeleton" style="height: 300px"></div>
+  } @else {
+    <div class="groups-grid">
+      @for (g of groups(); track g.id) {
+        <div class="card group-card">
+          <div class="group-name">{{ g.name }}</div>
+          <div class="group-meta">{{ g.direction?.shortName }} · {{ g.currentCourse }} курс</div>
+          <span class="badge" [class.badge-success]="g.isActive" [class.badge-neutral]="!g.isActive">
+            {{ g.isActive ? 'Активна' : 'Архив' }}
+          </span>
+        </div>
+      }
+    </div>
+
+    @if (groups().length === 0) {
+      <div class="empty-state card">
+        <p>Группы не найдены</p>
+      </div>
+    }
+  }
+</div>

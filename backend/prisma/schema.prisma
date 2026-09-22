@@ -1,0 +1,648 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ORGANIZATION
+// ============================================================
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  shortName   String
+  code        String?  @unique
+  address     String?
+  phone       String?
+  email       String?
+  headName    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users               User[]
+  students            Student[]
+  groups              Group[]
+  directions          Direction[]
+  programs            EducationalProgram[]
+  academicYears       AcademicYear[]
+  studentStatuses     StudentStatus[]
+  attendancePeriods   AttendancePeriod[]
+  attendanceReasons   AttendanceReason[]
+  attendanceFields    AttendanceField[]
+  importJobs          ImportJob[]
+  systemSettings      SystemSetting[]
+
+  @@map("organizations")
+}
+
+// ============================================================
+// USERS & AUTH
+// ============================================================
+model User {
+  id             String    @id @default(cuid())
+  organizationId String
+  email          String    @unique
+  passwordHash   String
+  firstName      String
+  lastName       String
+  middleName     String?
+  phone          String?
+  isActive       Boolean   @default(true)
+  isBlocked      Boolean   @default(false)
+  blockedAt      DateTime?
+  blockedReason  String?
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  roles          UserRole[]
+  groupScopes    UserGroupScope[]
+  directionScopes UserDirectionScope[]
+  auditLogs      AuditLog[]
+  importJobs     ImportJob[]
+  foremanGroups  GroupForeman[]
+  refreshTokens  RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  displayName String
+  description String?
+  module      String
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// Scope: к каким группам имеет доступ пользователь
+model UserGroupScope {
+  id        String   @id @default(cuid())
+  userId    String
+  groupId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@map("user_group_scopes")
+}
+
+// Scope: к каким направлениям имеет доступ пользователь (для менеджера)
+model UserDirectionScope {
+  id          String   @id @default(cuid())
+  userId      String
+  directionId String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  direction Direction @relation(fields: [directionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, directionId])
+  @@map("user_direction_scopes")
+}
+
+// ============================================================
+// ACADEMIC STRUCTURE
+// ============================================================
+model Direction {
+  id             String   @id @default(cuid())
+  organizationId String
+  code           String
+  name           String
+  shortName      String?
+  description    String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization        Organization         @relation(fields: [organizationId], references: [id])
+  programs            EducationalProgram[]
+  groups              Group[]
+  userScopes          UserDirectionScope[]
+
+  @@unique([organizationId, code])
+  @@map("directions")
+}
+
+model EducationalProgram {
+  id             String   @id @default(cuid())
+  organizationId String
+  directionId    String
+  code           String
+  name           String
+  shortName      String?
+  durationYears  Int      // срок обучения в годах
+  maxCourse      Int      // максимальный курс (обычно = durationYears)
+  description    String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  direction    Direction    @relation(fields: [directionId], references: [id])
+  groups       Group[]
+  students     Student[]
+
+  @@unique([organizationId, code])
+  @@map("educational_programs")
+}
+
+model AcademicYear {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String   // "2024-2025"
+  startDate      DateTime
+  endDate        DateTime
+  isCurrent      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  groups       Group[]
+  students     Student[]
+
+  @@unique([organizationId, name])
+  @@map("academic_years")
+}
+
+model StudentStatus {
+  id             String   @id @default(cuid())
+  organizationId String
+  code           String
+  name           String
+  description    String?
+  isTerminal     Boolean  @default(false) // отчислен, завершил обучение
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  organization     Organization           @relation(fields: [organizationId], references: [id])
+  students         Student[]
+  statusHistories  StudentStatusHistory[]
+
+  @@unique([organizationId, code])
+  @@map("student_statuses")
+}
+
+// ============================================================
+// STUDENTS
+// ============================================================
+model Student {
+  id               String    @id @default(cuid())
+  organizationId   String
+  internalId       String?   // внутренний номер в системе организации
+  lastName         String
+  firstName        String
+  middleName       String?
+  birthDate        DateTime?
+  enrollmentDate   DateTime?
+  graduationDate   DateTime?
+  academicYearId   String?
+  currentCourse    Int?
+  programId        String?
+  statusId         String
+  currentGroupId   String?
+  notes            String?
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  academicYear   AcademicYear?       @relation(fields: [academicYearId], references: [id])
+  program        EducationalProgram? @relation(fields: [programId], references: [id])
+  status         StudentStatus       @relation(fields: [statusId], references: [id])
+  currentGroup   Group?              @relation("CurrentGroupStudents", fields: [currentGroupId], references: [id])
+
+  statusHistory    StudentStatusHistory[]
+  groupHistory     StudentGroupHistory[]
+  courseHistory    StudentCourseHistory[]
+  attendanceRecords AttendanceRecord[]
+
+  @@unique([organizationId, internalId])
+  @@index([organizationId, currentGroupId])
+  @@index([organizationId, statusId])
+  @@map("students")
+}
+
+model StudentStatusHistory {
+  id         String   @id @default(cuid())
+  studentId  String
+  statusId   String
+  changeDate DateTime @default(now())
+  reason     String?
+  changedBy  String?  // userId
+
+  student Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status  StudentStatus @relation(fields: [statusId], references: [id])
+
+  @@index([studentId])
+  @@map("student_status_histories")
+}
+
+model StudentGroupHistory {
+  id         String   @id @default(cuid())
+  studentId  String
+  groupId    String
+  joinDate   DateTime @default(now())
+  leaveDate  DateTime?
+  reason     String?
+  changedBy  String?  // userId
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  group   Group   @relation(fields: [groupId], references: [id])
+
+  @@index([studentId])
+  @@map("student_group_histories")
+}
+
+model StudentCourseHistory {
+  id            String   @id @default(cuid())
+  studentId     String
+  fromCourse    Int?
+  toCourse      Int
+  transitionDate DateTime @default(now())
+  reason        String?
+  changedBy     String?  // userId
+  isAutomatic   Boolean  @default(false)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@map("student_course_histories")
+}
+
+// ============================================================
+// GROUPS
+// ============================================================
+model Group {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  academicYearId String?
+  directionId    String?
+  programId      String?
+  currentCourse  Int?
+  maxStudents    Int?
+  isActive       Boolean  @default(true)
+  isArchived     Boolean  @default(false)
+  archivedAt     DateTime?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id])
+  academicYear AcademicYear?       @relation(fields: [academicYearId], references: [id])
+  direction    Direction?          @relation(fields: [directionId], references: [id])
+  program      EducationalProgram? @relation(fields: [programId], references: [id])
+
+  students         Student[]            @relation("CurrentGroupStudents")
+  groupHistories   StudentGroupHistory[]
+  foremanHistory   GroupForeman[]
+  attendanceSheets AttendanceSheet[]
+  userScopes       UserGroupScope[]
+
+  @@unique([organizationId, name, academicYearId])
+  @@index([organizationId, isActive])
+  @@map("groups")
+}
+
+model GroupForeman {
+  id        String    @id @default(cuid())
+  groupId   String
+  userId    String
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+  isActive  Boolean   @default(true)
+  notes     String?
+  createdAt DateTime  @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@index([groupId, isActive])
+  @@map("group_foremen")
+}
+
+// ============================================================
+// ATTENDANCE
+// ============================================================
+model AttendancePeriod {
+  id             String   @id @default(cuid())
+  organizationId String
+  code           String
+  name           String   // "Утро", "Вечер"
+  startTime      String?  // "08:00"
+  endTime        String?  // "12:00"
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization     @relation(fields: [organizationId], references: [id])
+  sheets       AttendanceSheet[]
+
+  @@unique([organizationId, code])
+  @@map("attendance_periods")
+}
+
+model AttendanceReason {
+  id             String   @id @default(cuid())
+  organizationId String
+  code           String
+  name           String
+  description    String?
+  requiresNote   Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  organization Organization      @relation(fields: [organizationId], references: [id])
+  records      AttendanceRecord[]
+
+  @@unique([organizationId, code])
+  @@map("attendance_reasons")
+}
+
+// Настраиваемые поля табеля
+model AttendanceField {
+  id             String   @id @default(cuid())
+  organizationId String
+  code           String
+  name           String
+  fieldType      AttendanceFieldType
+  isRequired     Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization           @relation(fields: [organizationId], references: [id])
+  options      AttendanceFieldOption[]
+  values       AttendanceFieldValue[]
+
+  @@unique([organizationId, code])
+  @@map("attendance_fields")
+}
+
+enum AttendanceFieldType {
+  BOOLEAN
+  TEXT
+  NUMBER
+  SELECT
+  MULTI_SELECT
+  DATE
+  TIME
+}
+
+model AttendanceFieldOption {
+  id       String @id @default(cuid())
+  fieldId  String
+  value    String
+  label    String
+  sortOrder Int   @default(0)
+
+  field AttendanceField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@map("attendance_field_options")
+}
+
+model AttendanceSheet {
+  id           String              @id @default(cuid())
+  groupId      String
+  periodId     String
+  date         DateTime
+  status       AttendanceSheetStatus @default(DRAFT)
+  totalCount   Int                 @default(0)
+  presentCount Int                 @default(0)
+  absentCount  Int                 @default(0)
+  notes        String?
+  submittedAt  DateTime?
+  submittedBy  String?
+  reviewedAt   DateTime?
+  reviewedBy   String?
+  closedAt     DateTime?
+  closedBy     String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  group   Group            @relation(fields: [groupId], references: [id])
+  period  AttendancePeriod @relation(fields: [periodId], references: [id])
+  records AttendanceRecord[]
+
+  @@unique([groupId, periodId, date])
+  @@index([groupId, date])
+  @@index([status])
+  @@map("attendance_sheets")
+}
+
+enum AttendanceSheetStatus {
+  DRAFT
+  FILLED
+  SUBMITTED
+  REVIEWED
+  CLOSED
+}
+
+model AttendanceRecord {
+  id          String   @id @default(cuid())
+  sheetId     String
+  studentId   String
+  isPresent   Boolean
+  reasonId    String?
+  note        String?
+  markedAt    DateTime @default(now())
+  markedBy    String?
+
+  sheet   AttendanceSheet   @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  student Student           @relation(fields: [studentId], references: [id])
+  reason  AttendanceReason? @relation(fields: [reasonId], references: [id])
+  fieldValues AttendanceFieldValue[]
+
+  @@unique([sheetId, studentId])
+  @@index([sheetId])
+  @@index([studentId])
+  @@map("attendance_records")
+}
+
+model AttendanceFieldValue {
+  id         String @id @default(cuid())
+  recordId   String
+  fieldId    String
+  value      String // JSON-строка для multi_select, иначе строка
+
+  record AttendanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  field  AttendanceField  @relation(fields: [fieldId], references: [id])
+
+  @@unique([recordId, fieldId])
+  @@map("attendance_field_values")
+}
+
+// ============================================================
+// IMPORT
+// ============================================================
+model ImportJob {
+  id             String         @id @default(cuid())
+  organizationId String
+  userId         String
+  type           ImportJobType
+  status         ImportJobStatus @default(PENDING)
+  fileName       String?
+  totalRows      Int?
+  validRows      Int?
+  errorRows      Int?
+  importedRows   Int?
+  columnMapping  Json?          // сопоставление колонок
+  previewData    Json?          // preview первых 10 строк
+  confirmedAt    DateTime?
+  completedAt    DateTime?
+  errorMessage   String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  user         User          @relation(fields: [userId], references: [id])
+  errors       ImportError[]
+
+  @@index([organizationId, status])
+  @@map("import_jobs")
+}
+
+enum ImportJobType {
+  STUDENTS
+  ATTENDANCE
+}
+
+enum ImportJobStatus {
+  PENDING
+  PARSING
+  MAPPING
+  VALIDATING
+  PREVIEW
+  CONFIRMED
+  IMPORTING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model ImportError {
+  id        String   @id @default(cuid())
+  jobId     String
+  rowNumber Int
+  field     String?
+  value     String?
+  message   String
+  createdAt DateTime @default(now())
+
+  job ImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@map("import_errors")
+}
+
+// ============================================================
+// AUDIT
+// ============================================================
+model AuditLog {
+  id           String   @id @default(cuid())
+  organizationId String?
+  userId       String?
+  action       String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, etc.
+  entityType   String   // Student, Group, AttendanceSheet, etc.
+  entityId     String?
+  oldValue     Json?
+  newValue     Json?
+  metadata     Json?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================================
+// SYSTEM SETTINGS
+// ============================================================
+model SystemSetting {
+  id             String   @id @default(cuid())
+  organizationId String
+  key            String
+  value          String
+  description    String?
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, key])
+  @@map("system_settings")
+}

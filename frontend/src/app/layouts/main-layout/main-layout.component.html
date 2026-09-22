@@ -1,0 +1,38 @@
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">ФСИН</span>
+      <span class="brand-text">Контингент</span>
+    </div>
+
+    <nav class="nav">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Главная</a>
+
+      @if (auth.isForeman() || auth.isAdmin() || auth.isManager()) {
+        <a routerLink="/attendance" routerLinkActive="active" class="nav-link">Табель</a>
+      }
+
+      @if (auth.isAdmin() || auth.isManager()) {
+        <a routerLink="/students" routerLinkActive="active" class="nav-link">Студенты</a>
+        <a routerLink="/groups" routerLinkActive="active" class="nav-link">Группы</a>
+      }
+    </nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-spacer"></div>
+      <div class="user-menu">
+        <div class="user-info">
+          <span class="user-name">{{ auth.currentUser()?.lastName }} {{ auth.currentUser()?.firstName }}</span>
+          <span class="user-role badge badge-neutral">{{ auth.roles()[0] }}</span>
+        </div>
+        <button type="button" class="btn btn-ghost" (click)="logout()">Выйти</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

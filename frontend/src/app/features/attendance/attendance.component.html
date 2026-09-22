@@ -1,0 +1,167 @@
+<div class="attendance-page">
+  <div class="toolbar card">
+    <div class="form-field">
+      <label>Группа</label>
+      <select [ngModel]="selectedGroupId()" (ngModelChange)="selectedGroupId.set($event); onContextChange()">
+        @for (g of groups(); track g.id) {
+          <option [value]="g.id">{{ g.name }} ({{ g.currentCourse }} курс)</option>
+        }
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label>Период</label>
+      <select [ngModel]="selectedPeriodId()" (ngModelChange)="selectedPeriodId.set($event); onContextChange()">
+        @for (p of periods(); track p.id) {
+          <option [value]="p.id">{{ p.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label>Дата</label>
+      <input type="date" [ngModel]="date()" (ngModelChange)="date.set($event); onContextChange()" />
+    </div>
+
+    @if (sheet(); as s) {
+      <div class="toolbar-status">
+        <span class="badge badge-neutral">{{ statusLabel(s.status) }}</span>
+      </div>
+    }
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-danger">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="card skeleton" style="height: 320px"></div>
+  } @else if (sheet()) {
+    @if (validation(); as v) {
+      <div class="validation-bar card" [class.valid]="v.isValid">
+        @if (v.isValid) {
+          <span>✓ Все {{ v.totalStudents }} студентов отмечены</span>
+        } @else {
+          <span>
+            Отмечено {{ v.totalMarked }} из {{ v.totalStudents }}.
+            @if (v.unmarked > 0) { Не указана явка для {{ v.unmarked }}. }
+            @if (v.absentWithoutReasonCount > 0) { Без причины: {{ v.absentWithoutReasonCount }}. }
+          </span>
+        }
+      </div>
+    }
+
+    <div class="actions-bar card">
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Поиск по имени…"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+      />
+
+      <div class="bulk-actions">
+        <button type="button" class="btn btn-secondary" (click)="toggleSelectAll()">
+          {{ allSelected() ? 'Снять выделение' : 'Выбрать всех' }}
+        </button>
+
+        <span class="selected-count">Выбрано: {{ selectedCount() }}</span>
+
+        <button type="button" class="btn btn-secondary" [disabled]="selectedCount() === 0 || isClosed" (click)="bulkMarkPresent()">
+          Отметить присутствующими
+        </button>
+
+        <select
+          class="bulk-reason-select"
+          [disabled]="selectedCount() === 0 || isClosed"
+          (change)="bulkMarkAbsent($any($event.target).value); $any($event.target).value = ''"
+        >
+          <option value="" disabled selected>Отметить отсутствующими…</option>
+          @for (r of reasons(); track r.id) {
+            <option [value]="r.id">{{ r.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="save-actions">
+        <button type="button" class="btn btn-primary" [disabled]="saving() || isClosed" (click)="save()">
+          {{ saving() ? 'Сохранение…' : 'Сохранить' }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          [disabled]="saving() || isClosed || !validation()?.isValid"
+          (click)="submit()"
+        >
+          Отправить на проверку
+        </button>
+      </div>
+    </div>
+
+    <div class="card students-table">
+      <table>
+        <thead>
+          <tr>
+            <th class="select-col"></th>
+            <th>Студент</th>
+            <th>Явка</th>
+            <th>Причина</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of filteredRows(); track row.studentId) {
+            <tr [class.absent]="!row.isPresent">
+              <td class="select-col">
+                <input type="checkbox" [checked]="row.selected" (change)="toggleRowSelected(row.studentId)" />
+              </td>
+              <td>{{ row.name }}</td>
+              <td>
+                <div class="presence-toggle">
+                  <button
+                    type="button"
+                    class="btn btn-ghost"
+                    [class.active-present]="row.isPresent"
+                    [disabled]="isClosed"
+                    (click)="markPresent(row.studentId)"
+                  >
+                    Присутствует
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-ghost"
+                    [class.active-absent]="!row.isPresent"
+                    [disabled]="isClosed"
+                    (click)="markAbsent(row.studentId, row.reasonId || defaultReasonId())"
+                  >
+                    Отсутствует
+                  </button>
+                </div>
+              </td>
+              <td>
+                @if (!row.isPresent) {
+                  <select
+                    [ngModel]="row.reasonId"
+                    [disabled]="isClosed"
+                    (ngModelChange)="markAbsent(row.studentId, $event)"
+                  >
+                    @for (r of reasons(); track r.id) {
+                      <option [value]="r.id">{{ r.name }}</option>
+                    }
+                  </select>
+                } @else {
+                  <span class="text-muted">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (filteredRows().length === 0) {
+        <div class="empty-state">
+          <p>Студенты не найдены</p>
+        </div>
+      }
+    </div>
+  }
+</div>
