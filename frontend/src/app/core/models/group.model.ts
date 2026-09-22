@@ -7,6 +7,8 @@ export interface Group {
   direction?: { id: string; name: string; shortName: string } | null;
   program?: { id: string; name: string; shortName: string } | null;
   academicYear?: { id: string; name: string } | null;
+  foremanHistory?: { isActive: boolean; user: { id: string; firstName: string; lastName: string } }[];
+  _count?: { students: number };
 }
 
 export interface Paginated<T> {

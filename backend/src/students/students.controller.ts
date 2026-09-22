@@ -49,8 +49,8 @@ export class StudentsController {
 
   @Post()
   @Roles('admin', 'manager')
-  create(@Body() dto: CreateStudentDto, @CurrentUser('id') userId: string) {
-    return this.studentsService.create(dto, userId);
+  create(@Body() dto: CreateStudentDto, @CurrentUser('organizationId') orgId: string, @CurrentUser('id') userId: string) {
+    return this.studentsService.create({ ...dto, organizationId: orgId }, userId);
   }
 
   @Patch(':id')

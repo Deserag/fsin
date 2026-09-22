@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -14,6 +14,11 @@ export class ModalComponent {
   @Output() closed = new EventEmitter<void>();
 
   onBackdropClick(): void {
+    this.closed.emit();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
     this.closed.emit();
   }
 }

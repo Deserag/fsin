@@ -1,13 +1,16 @@
 <div class="students-page page-fade-in">
   <div class="page-header">
     <h2>Студенты <span class="text-muted">({{ total() }})</span></h2>
-    <input
-      type="text"
-      class="search-input"
-      placeholder="Поиск по ФИО…"
-      [ngModel]="search()"
-      (ngModelChange)="onSearchChange($event)"
-    />
+    <div class="page-header-actions">
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Поиск по ФИО…"
+        [ngModel]="search()"
+        (ngModelChange)="onSearchChange($event)"
+      />
+      <button type="button" class="btn btn-primary" (click)="openCreate()">+ Новый студент</button>
+    </div>
   </div>
 
   @if (loading()) {
@@ -22,17 +25,21 @@
             <th>Группа</th>
             <th>Курс</th>
             <th>Статус</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           @for (s of students(); track s.id) {
-            <tr>
+            <tr class="row-fade-in">
               <td>{{ s.internalId }}</td>
               <td>{{ s.lastName }} {{ s.firstName }} {{ s.middleName }}</td>
               <td>{{ s.currentGroup?.name ?? '—' }}</td>
               <td>{{ s.currentCourse }}</td>
               <td>
                 <span class="badge badge-neutral">{{ s.status?.name ?? '—' }}</span>
+              </td>
+              <td>
+                <button type="button" class="btn btn-ghost" (click)="openEdit(s)">Изменить</button>
               </td>
             </tr>
           }
@@ -47,3 +54,64 @@
     </div>
   }
 </div>
+
+@if (modalOpen()) {
+  <app-modal [title]="form().id ? 'Редактирование студента' : 'Новый студент'" width="520px" (closed)="closeModal()">
+    <div class="student-form">
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Фамилия *</label>
+          <input type="text" [ngModel]="form().lastName" (ngModelChange)="updateField('lastName', $event)" />
+        </div>
+        <div class="form-field">
+          <label>Имя *</label>
+          <input type="text" [ngModel]="form().firstName" (ngModelChange)="updateField('firstName', $event)" />
+        </div>
+        <div class="form-field">
+          <label>Отчество</label>
+          <input type="text" [ngModel]="form().middleName" (ngModelChange)="updateField('middleName', $event)" />
+        </div>
+        <div class="form-field">
+          <label>Дата рождения</label>
+          <input type="date" [ngModel]="form().birthDate" (ngModelChange)="updateField('birthDate', $event)" />
+        </div>
+        <div class="form-field">
+          <label>Дата зачисления</label>
+          <input type="date" [ngModel]="form().enrollmentDate" (ngModelChange)="updateField('enrollmentDate', $event)" />
+        </div>
+        <div class="form-field">
+          <label>Курс</label>
+          <input type="number" min="1" max="10" [ngModel]="form().currentCourse" (ngModelChange)="updateField('currentCourse', $event)" />
+        </div>
+        <div class="form-field">
+          <label>Группа</label>
+          <select [ngModel]="form().currentGroupId" (ngModelChange)="updateField('currentGroupId', $event)">
+            <option value="">— не назначена —</option>
+            @for (g of groups(); track g.id) { <option [value]="g.id">{{ g.name }}</option> }
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Программа</label>
+          <select [ngModel]="form().programId" (ngModelChange)="updateField('programId', $event)">
+            <option value="">— не выбрана —</option>
+            @for (p of programs(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Статус *</label>
+          <select [ngModel]="form().statusId" (ngModelChange)="updateField('statusId', $event)">
+            <option value="" disabled>Выберите…</option>
+            @for (s of statuses(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeModal()">Отмена</button>
+        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
+          {{ saving() ? 'Сохранение…' : 'Сохранить' }}
+        </button>
+      </div>
+    </div>
+  </app-modal>
+}

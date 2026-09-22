@@ -1,5 +1,10 @@
 <div class="groups-page page-fade-in">
-  <h2>Группы</h2>
+  <div class="page-header">
+    <h2>Группы</h2>
+    @if (auth.isAdmin()) {
+      <button type="button" class="btn btn-primary" (click)="openCreate()">+ Новая группа</button>
+    }
+  </div>
 
   @if (loading()) {
     <div class="card skeleton" style="height: 300px"></div>
@@ -9,9 +14,19 @@
         <div class="card group-card">
           <div class="group-name">{{ g.name }}</div>
           <div class="group-meta">{{ g.direction?.shortName }} · {{ g.currentCourse }} курс</div>
-          <span class="badge" [class.badge-success]="g.isActive" [class.badge-neutral]="!g.isActive">
-            {{ g.isActive ? 'Активна' : 'Архив' }}
-          </span>
+          <div class="group-meta">Старшина: {{ currentForeman(g) }}</div>
+          <div class="group-footer">
+            <span class="badge" [class.badge-success]="g.isActive" [class.badge-neutral]="!g.isActive">
+              {{ g.isActive ? 'Активна' : 'Архив' }}
+            </span>
+
+            @if (auth.isAdmin() && g.isActive) {
+              <div class="group-actions">
+                <button type="button" class="btn btn-ghost" (click)="openForemanModal(g)">Старшина</button>
+                <button type="button" class="btn btn-ghost btn-danger" (click)="archive(g)">Архив</button>
+              </div>
+            }
+          </div>
         </div>
       }
     </div>
@@ -23,3 +38,62 @@
     }
   }
 </div>
+
+@if (modalOpen()) {
+  <app-modal title="Новая группа" width="480px" (closed)="closeModal()">
+    <div class="group-form">
+      <div class="form-field">
+        <label>Название *</label>
+        <input type="text" [ngModel]="form().name" (ngModelChange)="updateField('name', $event)" />
+      </div>
+      <div class="form-field">
+        <label>Направление *</label>
+        <select [ngModel]="form().directionId" (ngModelChange)="updateField('directionId', $event)">
+          <option value="" disabled>Выберите…</option>
+          @for (d of directions(); track d.id) { <option [value]="d.id">{{ d.name }}</option> }
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Программа *</label>
+        <select [ngModel]="form().programId" (ngModelChange)="updateField('programId', $event)">
+          <option value="" disabled>Выберите…</option>
+          @for (p of programsForDirection(form().directionId); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Учебный год *</label>
+        <select [ngModel]="form().academicYearId" (ngModelChange)="updateField('academicYearId', $event)">
+          <option value="" disabled>Выберите…</option>
+          @for (y of academicYears(); track y.id) { <option [value]="y.id">{{ y.name }}</option> }
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Курс</label>
+        <input type="number" min="1" max="10" [ngModel]="form().currentCourse" (ngModelChange)="updateField('currentCourse', $event)" />
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeModal()">Отмена</button>
+        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
+          {{ saving() ? 'Сохранение…' : 'Создать' }}
+        </button>
+      </div>
+    </div>
+  </app-modal>
+}
+
+@if (foremanModalGroup(); as fg) {
+  <app-modal title="Назначить старшину" width="420px" (closed)="closeForemanModal()">
+    <div class="form-field">
+      <label>Группа «{{ fg.name }}»</label>
+      <select [ngModel]="selectedForemanId()" (ngModelChange)="selectedForemanId.set($event)">
+        <option value="" disabled>Выберите пользователя…</option>
+        @for (u of users(); track u.id) { <option [value]="u.id">{{ u.lastName }} {{ u.firstName }}</option> }
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" (click)="closeForemanModal()">Отмена</button>
+      <button type="button" class="btn btn-primary" [disabled]="!selectedForemanId()" (click)="assignForeman()">Назначить</button>
+    </div>
+  </app-modal>
+}

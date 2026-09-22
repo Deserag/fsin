@@ -1,18 +1,11 @@
-.students-page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
+@use 'styles/admin-shared' as admin;
 
 .page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  @include admin.page-header;
+}
 
-  h2 {
-    font-size: var(--font-size-xl);
-  }
+.page-header-actions {
+  @include admin.page-header-actions;
 }
 
 .text-muted {
@@ -21,31 +14,18 @@
 }
 
 .search-input {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-sm);
-  min-width: 260px;
+  @include admin.search-input;
 }
 
 .students-table {
-  overflow-x: auto;
+  @include admin.data-table;
+  margin-top: var(--space-4);
+}
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
+.form-grid {
+  @include admin.form-grid;
+}
 
-  th,
-  td {
-    text-align: left;
-    padding: var(--space-3) var(--space-4);
-    font-size: var(--font-size-sm);
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  th {
-    color: var(--color-text-secondary);
-    font-weight: 500;
-  }
+.modal-actions {
+  @include admin.modal-actions;
 }

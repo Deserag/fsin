@@ -10,8 +10,9 @@ import {
 } from 'class-validator';
 
 export class CreateStudentDto {
+  @IsOptional()
   @IsString()
-  organizationId: string;
+  organizationId?: string;
 
   @IsOptional()
   @IsString()

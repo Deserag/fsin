@@ -1,16 +1,13 @@
-.groups-page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
+@use 'styles/admin-shared' as admin;
 
-h2 {
-  font-size: var(--font-size-xl);
+.page-header {
+  @include admin.page-header;
+  margin-bottom: var(--space-4);
 }
 
 .groups-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--space-4);
 }
 
@@ -19,6 +16,11 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  transition: box-shadow var(--transition-fast);
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
 }
 
 .group-name {
@@ -29,4 +31,26 @@ h2 {
 .group-meta {
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
+}
+
+.group-footer {
+  margin-top: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.group-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.group-form .form-field {
+  margin-bottom: var(--space-3);
+}
+
+.modal-actions {
+  @include admin.modal-actions;
 }

@@ -120,10 +120,12 @@ export class StudentsService {
   }
 
   async create(dto: CreateStudentDto, createdBy: string) {
+    const organizationId = dto.organizationId as string;
+
     // Check unique internal ID
     if (dto.internalId) {
       const existing = await this.prisma.student.findFirst({
-        where: { organizationId: dto.organizationId, internalId: dto.internalId },
+        where: { organizationId, internalId: dto.internalId },
       });
       if (existing) {
         throw new BadRequestException(`Студент с идентификатором ${dto.internalId} уже существует`);
@@ -133,7 +135,7 @@ export class StudentsService {
     const student = await this.prisma.$transaction(async (tx) => {
       const s = await tx.student.create({
         data: {
-          organizationId: dto.organizationId,
+          organizationId,
           internalId: dto.internalId,
           lastName: dto.lastName,
           firstName: dto.firstName,
