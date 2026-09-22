@@ -20,6 +20,8 @@
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
+    "pretest:e2e": "npm run test:e2e:reset",
+    "test:e2e:reset": "node --env-file=.env.test node_modules/.bin/prisma migrate reset --force --skip-seed && node --env-file=.env.test node_modules/.bin/tsx prisma/seed.ts",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",

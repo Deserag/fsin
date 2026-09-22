@@ -135,18 +135,36 @@ export class CourseTransitionService {
       throw new BadRequestException('Статус "Обучение завершено" не найден');
     }
 
+    // Idempotency guard: preview() always computes "current course + 1" from
+    // the student's live state, so a naive currentCourse===toCourse check
+    // never fires on a second run — it would just promote everyone again.
+    // Instead, scope by the current academic year: a student who already has
+    // an automatic course-history entry since the academic year started has
+    // already been transitioned this cycle.
+    const currentYear = await this.prisma.academicYear.findFirst({
+      where: { organizationId, isCurrent: true },
+    });
+    if (!currentYear) {
+      throw new BadRequestException('Текущий учебный год не настроен');
+    }
+    const alreadyTransitioned = await this.prisma.studentCourseHistory.findMany({
+      where: {
+        isAutomatic: true,
+        transitionDate: { gte: currentYear.startDate },
+        studentId: { in: previewResult.transitions.map((t) => t.studentId) },
+      },
+      select: { studentId: true },
+    });
+    const alreadyTransitionedIds = new Set(alreadyTransitioned.map((h) => h.studentId));
+
     const transitionDate = new Date();
 
     for (const transition of previewResult.transitions) {
       try {
         await this.prisma.$transaction(async (tx) => {
           if (transition.action === 'PROMOTE') {
-            const student = await tx.student.findUnique({
-              where: { id: transition.studentId },
-            });
-
-            // Idempotency check: skip if already promoted
-            if (student?.currentCourse === transition.toCourse) {
+            // Idempotency check: skip if already transitioned this academic year
+            if (alreadyTransitionedIds.has(transition.studentId)) {
               skipped++;
               return;
             }
