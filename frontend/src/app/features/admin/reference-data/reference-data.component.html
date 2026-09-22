@@ -98,6 +98,39 @@
             </tbody>
           </table>
         }
+        @case ('fields') {
+          <table>
+            <thead><tr><th>Порядок</th><th>Код</th><th>Название</th><th>Тип</th><th>Обязательное</th><th>Статус</th><th></th></tr></thead>
+            <tbody>
+              @for (f of fields(); track f.id; let i = $index) {
+                <tr class="row-fade-in">
+                  <td class="reorder-col">
+                    <button type="button" class="btn btn-ghost btn-icon" [disabled]="i === 0" (click)="moveField(f, -1)">↑</button>
+                    <button type="button" class="btn btn-ghost btn-icon" [disabled]="i === fields().length - 1" (click)="moveField(f, 1)">↓</button>
+                  </td>
+                  <td>{{ f.code }}</td>
+                  <td>{{ f.name }}</td>
+                  <td>{{ fieldTypeLabel(f.fieldType) }}</td>
+                  <td>
+                    <label class="checkbox-item">
+                      <input type="checkbox" [checked]="f.isRequired" (change)="toggleFieldRequired(f)" />
+                    </label>
+                  </td>
+                  <td>
+                    <span class="badge" [class.badge-success]="f.isActive" [class.badge-neutral]="!f.isActive">
+                      {{ f.isActive ? 'Активно' : 'Отключено' }}
+                    </span>
+                  </td>
+                  <td>
+                    <button type="button" class="btn btn-ghost" (click)="toggleFieldActive(f)">
+                      {{ f.isActive ? 'Отключить' : 'Включить' }}
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
       }
     </div>
   }
@@ -144,6 +177,23 @@
           <div class="form-field"><label>Код *</label><input type="text" [ngModel]="form()['code']" (ngModelChange)="updateForm('code', $event)" /></div>
           <div class="form-field"><label>Название *</label><input type="text" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
           <label class="checkbox-item"><input type="checkbox" [ngModel]="form()['requiresNote']" (ngModelChange)="updateForm('requiresNote', $event)" /> Требует комментария</label>
+        }
+        @case ('fields') {
+          <div class="form-field"><label>Код *</label><input type="text" [ngModel]="form()['code']" (ngModelChange)="updateForm('code', $event)" /></div>
+          <div class="form-field"><label>Название *</label><input type="text" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
+          <div class="form-field">
+            <label>Тип поля *</label>
+            <select [ngModel]="form()['fieldType']" (ngModelChange)="updateForm('fieldType', $event)">
+              @for (t of fieldTypes; track t.value) { <option [value]="t.value">{{ t.label }}</option> }
+            </select>
+          </div>
+          @if (form()['fieldType'] === 'SELECT' || form()['fieldType'] === 'MULTI_SELECT') {
+            <div class="form-field">
+              <label>Варианты (через запятую)</label>
+              <input type="text" [ngModel]="newFieldOptions()" (ngModelChange)="newFieldOptions.set($event)" placeholder="Вариант 1, Вариант 2" />
+            </div>
+          }
+          <label class="checkbox-item"><input type="checkbox" [ngModel]="form()['isRequired']" (ngModelChange)="updateForm('isRequired', $event)" /> Обязательное поле</label>
         }
       }
 

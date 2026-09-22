@@ -69,6 +69,13 @@ export interface StudentStatus {
 
 export type AttendanceFieldType = 'BOOLEAN' | 'TEXT' | 'NUMBER' | 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'TIME';
 
+export interface AttendanceFieldOption {
+  id: string;
+  value: string;
+  label: string;
+  sortOrder: number;
+}
+
 export interface AttendanceField {
   id: string;
   code: string;
@@ -77,6 +84,7 @@ export interface AttendanceField {
   isRequired: boolean;
   sortOrder: number;
   isActive: boolean;
+  options?: AttendanceFieldOption[];
 }
 
 export interface Organization {

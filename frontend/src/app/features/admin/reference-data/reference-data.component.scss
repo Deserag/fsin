@@ -50,3 +50,12 @@
 .modal-actions {
   @include admin.modal-actions;
 }
+
+.reorder-col {
+  display: flex;
+  gap: 2px;
+}
+
+.btn-icon {
+  padding: 2px 8px;
+}

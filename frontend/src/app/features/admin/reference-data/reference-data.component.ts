@@ -3,12 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ReferenceDataService } from '../../../core/services/reference-data.service';
-import { AcademicYear, Direction, EducationalProgram, StudentStatus } from '../../../core/models/admin.model';
+import { AcademicYear, AttendanceField, AttendanceFieldType, Direction, EducationalProgram, StudentStatus } from '../../../core/models/admin.model';
 import { AttendancePeriod, AttendanceReason } from '../../../core/models/attendance.model';
 import { ToastService } from '../../../shared/services/toast.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
-type TabKey = 'directions' | 'programs' | 'academicYears' | 'statuses' | 'periods' | 'reasons';
+type TabKey = 'directions' | 'programs' | 'academicYears' | 'statuses' | 'periods' | 'reasons' | 'fields';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'directions', label: 'Направления' },
@@ -17,6 +17,17 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'statuses', label: 'Статусы студентов' },
   { key: 'periods', label: 'Периоды посещаемости' },
   { key: 'reasons', label: 'Причины отсутствия' },
+  { key: 'fields', label: 'Поля табеля' },
+];
+
+const FIELD_TYPES: { value: AttendanceFieldType; label: string }[] = [
+  { value: 'BOOLEAN', label: 'Да/Нет' },
+  { value: 'TEXT', label: 'Текст' },
+  { value: 'NUMBER', label: 'Число' },
+  { value: 'SELECT', label: 'Список (один вариант)' },
+  { value: 'MULTI_SELECT', label: 'Список (несколько вариантов)' },
+  { value: 'DATE', label: 'Дата' },
+  { value: 'TIME', label: 'Время' },
 ];
 
 @Component({
@@ -28,6 +39,7 @@ const TABS: { key: TabKey; label: string }[] = [
 })
 export class ReferenceDataComponent implements OnInit {
   readonly tabs = TABS;
+  readonly fieldTypes = FIELD_TYPES;
   readonly activeTab = signal<TabKey>('directions');
   readonly loading = signal(true);
 
@@ -37,6 +49,8 @@ export class ReferenceDataComponent implements OnInit {
   readonly statuses = signal<StudentStatus[]>([]);
   readonly periods = signal<AttendancePeriod[]>([]);
   readonly reasons = signal<AttendanceReason[]>([]);
+  readonly fields = signal<AttendanceField[]>([]);
+  readonly newFieldOptions = signal('');
 
   readonly modalOpen = signal(false);
   readonly saving = signal(false);
@@ -57,6 +71,7 @@ export class ReferenceDataComponent implements OnInit {
       firstValueFrom(this.refData.statuses()).then((d) => this.statuses.set(d ?? [])),
       firstValueFrom(this.refData.periods()).then((d) => this.periods.set(d ?? [])),
       firstValueFrom(this.refData.reasons()).then((d) => this.reasons.set(d ?? [])),
+      firstValueFrom(this.refData.fields()).then((d) => this.fields.set(d ?? [])),
     ])
       .then(() => this.loading.set(false))
       .catch(() => {
@@ -70,7 +85,8 @@ export class ReferenceDataComponent implements OnInit {
   }
 
   openCreate(): void {
-    this.form.set({ isActive: true });
+    this.form.set({ isActive: true, fieldType: 'TEXT' });
+    this.newFieldOptions.set('');
     this.modalOpen.set(true);
   }
 
@@ -137,7 +153,64 @@ export class ReferenceDataComponent implements OnInit {
           .createReason({ code: f['code'], name: f['name'], requiresNote: !!f['requiresNote'] })
           .subscribe({ next: () => done('Причина добавлена'), error: fail });
         break;
+      case 'fields': {
+        const needsOptions = f['fieldType'] === 'SELECT' || f['fieldType'] === 'MULTI_SELECT';
+        const options = needsOptions
+          ? this.newFieldOptions()
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+              .map((label, i) => ({ value: label, label, sortOrder: i }))
+          : undefined;
+        this.refData
+          .createField({
+            code: f['code'],
+            name: f['name'],
+            fieldType: f['fieldType'] ?? 'TEXT',
+            isRequired: !!f['isRequired'],
+            sortOrder: this.fields().length,
+            options: options as any,
+          })
+          .subscribe({ next: () => done('Поле добавлено'), error: fail });
+        break;
+      }
     }
+  }
+
+  toggleFieldRequired(field: AttendanceField): void {
+    this.refData.updateField(field.id, { isRequired: !field.isRequired }).subscribe({
+      next: () => this.loadAll(),
+      error: () => this.toast.error('Не удалось изменить поле'),
+    });
+  }
+
+  toggleFieldActive(field: AttendanceField): void {
+    this.refData.updateField(field.id, { isActive: !field.isActive }).subscribe({
+      next: () => {
+        this.toast.success(field.isActive ? 'Поле отключено' : 'Поле включено');
+        this.loadAll();
+      },
+      error: () => this.toast.error('Не удалось изменить поле'),
+    });
+  }
+
+  moveField(field: AttendanceField, direction: -1 | 1): void {
+    const sorted = [...this.fields()].sort((a, b) => a.sortOrder - b.sortOrder);
+    const idx = sorted.findIndex((f) => f.id === field.id);
+    const swapIdx = idx + direction;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const other = sorted[swapIdx];
+
+    Promise.all([
+      firstValueFrom(this.refData.updateField(field.id, { sortOrder: other.sortOrder })),
+      firstValueFrom(this.refData.updateField(other.id, { sortOrder: field.sortOrder })),
+    ])
+      .then(() => this.loadAll())
+      .catch(() => this.toast.error('Не удалось изменить порядок'));
+  }
+
+  fieldTypeLabel(type: AttendanceFieldType): string {
+    return this.fieldTypes.find((t) => t.value === type)?.label ?? type;
   }
 
   setCurrentYear(id: string): void {
