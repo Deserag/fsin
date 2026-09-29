@@ -11,6 +11,9 @@ const base = environment.apiUrl;
 export class ReferenceDataService {
   constructor(private readonly http: HttpClient) {}
 
+  listReference(path: string): Observable<any[]> { return this.http.get<any[]>(`${base}/${path}`); }
+  saveReference(path: string, dto: any, id?: string) { return id ? this.http.patch(`${base}/${path}/${id}`, dto) : this.http.post(`${base}/${path}`, dto); }
+  deleteReference(path: string, id: string) { return this.http.delete(`${base}/${path}/${id}`); }
   // Directions
   directions(): Observable<Direction[]> {
     return this.http.get<Direction[]>(`${base}/directions`);

@@ -16,6 +16,10 @@ import {
 export class AttendanceService {
   constructor(private readonly http: HttpClient) {}
 
+  course(context: any, create = false): Observable<AttendanceSheetDetail[]> { return create ? this.http.post<AttendanceSheetDetail[]>(`${environment.apiUrl}/attendance/course`, context) : this.http.get<AttendanceSheetDetail[]>(`${environment.apiUrl}/attendance/course`, { params: context }); }
+  courseAction(context: any, action: string, comment?: string) { return this.http.patch(`${environment.apiUrl}/attendance/course`, {...context, action, comment}); }
+  reviewQueue(status = 'SUBMITTED'): Observable<any> { return this.http.get(`${environment.apiUrl}/attendance/sheets`, {params: {status, limit: '500'}}); }
+  returnSheet(id:string,comment:string){ return this.http.patch(`${environment.apiUrl}/attendance/sheets/${id}/return`,{comment}); }
   periods(): Observable<AttendancePeriod[]> {
     return this.http.get<AttendancePeriod[]>(`${environment.apiUrl}/settings/attendance-periods`);
   }

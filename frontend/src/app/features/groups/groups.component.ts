@@ -1,12 +1,12 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import { GroupsService } from '../../core/services/groups.service';
 import { ReferenceDataService } from '../../core/services/reference-data.service';
 import { UsersAdminService } from '../../core/services/users-admin.service';
 import { Group } from '../../core/models/group.model';
-import { AcademicYear, AdminUser, Direction, EducationalProgram } from '../../core/models/admin.model';
+import { AcademicYear, AdminUser, EducationalProgram } from '../../core/models/admin.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { ConfirmService } from '../../shared/services/confirm.service';
@@ -15,14 +15,13 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
 interface GroupFormState {
   id: string | null;
   name: string;
-  directionId: string;
   programId: string;
   academicYearId: string;
   currentCourse: number;
 }
 
 function emptyForm(): GroupFormState {
-  return { id: null, name: '', directionId: '', programId: '', academicYearId: '', currentCourse: 1 };
+  return { id: null, name: '', programId: '', academicYearId: '', currentCourse: 1 };
 }
 
 @Component({
@@ -34,7 +33,6 @@ function emptyForm(): GroupFormState {
 })
 export class GroupsComponent implements OnInit {
   readonly groups = signal<Group[]>([]);
-  readonly directions = signal<Direction[]>([]);
   readonly programs = signal<EducationalProgram[]>([]);
   readonly academicYears = signal<AcademicYear[]>([]);
   readonly users = signal<AdminUser[]>([]);
@@ -60,18 +58,18 @@ export class GroupsComponent implements OnInit {
     this.load();
   }
 
-  private load(): void {
+  readonly archived = signal(false);
+  readonly search = signal('');
+  load(): void {
     this.loading.set(true);
     forkJoin({
-      groups: this.groupsService.list(),
-      directions: this.referenceData.directions(),
+      groups: this.groupsService.list({isArchived: String(this.archived()), search: this.search()}),
       programs: this.referenceData.programs(),
       academicYears: this.referenceData.academicYears(),
-      users: this.usersService.list(),
+      users: this.auth.isAdmin() ? this.usersService.list() : of({data: []}),
     }).subscribe({
-      next: ({ groups, directions, programs, academicYears, users }) => {
+      next: ({ groups, programs, academicYears, users }) => {
         this.groups.set(groups.data);
-        this.directions.set(directions);
         this.programs.set(programs);
         this.academicYears.set(academicYears);
         this.users.set(users.data);
@@ -81,12 +79,13 @@ export class GroupsComponent implements OnInit {
     });
   }
 
-  programsForDirection(directionId: string): EducationalProgram[] {
-    return this.programs().filter((p) => p.directionId === directionId);
-  }
-
   openCreate(): void {
     this.form.set(emptyForm());
+    this.modalOpen.set(true);
+  }
+
+  openEdit(group: Group): void {
+    this.form.set({ id: group.id, name: group.name, programId: group.program?.id ?? '', academicYearId: group.academicYear?.id ?? '', currentCourse: group.currentCourse });
     this.modalOpen.set(true);
   }
 
@@ -100,30 +99,32 @@ export class GroupsComponent implements OnInit {
 
   save(): void {
     const f = this.form();
-    if (!f.name || !f.directionId || !f.programId || !f.academicYearId) {
+    if (!f.name || !f.programId || !f.academicYearId) {
       this.toast.error('Заполните обязательные поля');
       return;
     }
 
     this.saving.set(true);
-    this.groupsService
-      .create({
+    (f.id ? this.groupsService.update(f.id, {
         name: f.name,
-        directionId: f.directionId,
+        programId: f.programId,
+        academicYearId: f.academicYearId,
+      }) : this.groupsService.create({
+        name: f.name,
         programId: f.programId,
         academicYearId: f.academicYearId,
         currentCourse: Number(f.currentCourse),
-      })
+      }))
       .subscribe({
         next: () => {
           this.saving.set(false);
           this.modalOpen.set(false);
-          this.toast.success('Группа создана');
+          this.toast.success(f.id ? 'Группа обновлена' : 'Группа создана');
           this.load();
         },
         error: (err) => {
           this.saving.set(false);
-          this.toast.error(err.error?.message ?? 'Не удалось создать группу');
+          this.toast.error(err.error?.message ?? 'Не удалось сохранить группу');
         },
       });
   }
@@ -150,14 +151,15 @@ export class GroupsComponent implements OnInit {
 
     this.groupsService.assignForeman(group.id, userId).subscribe({
       next: () => {
-        this.toast.success('Старшина назначен');
+        this.toast.success('Сотрудник УСП назначен');
         this.foremanModalGroup.set(null);
         this.load();
       },
-      error: (err) => this.toast.error(err.error?.message ?? 'Не удалось назначить старшину'),
+      error: (err) => this.toast.error(err.error?.message ?? 'Не удалось назначить сотрудника УСП'),
     });
   }
 
+  restore(group:Group){this.groupsService.restore(group.id).subscribe({next:()=>this.load(),error:e=>this.toast.error(e.error?.message??'Не удалось восстановить')});}
   async archive(group: Group): Promise<void> {
     const confirmed = await this.confirmService.ask({
       title: 'Архивировать группу?',

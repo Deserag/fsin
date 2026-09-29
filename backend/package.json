@@ -19,14 +19,14 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
-    "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
-    "pretest:e2e": "npm run test:e2e:reset",
-    "test:e2e:reset": "node --env-file=.env.test node_modules/.bin/prisma migrate reset --force --skip-seed && node --env-file=.env.test node_modules/.bin/tsx prisma/seed.ts",
+    "test:e2e": "node --env-file=.env scripts/test-e2e.mjs",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force && tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:seed": "tsx --env-file=.env prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "data:update": "tsx --env-file=.env prisma/data-update.ts",
+    "db:deploy": "prisma migrate deploy",
+    "verify:upgrade": "node --env-file=.env scripts/prepare-verification.mjs && node scripts/run-verification-command.mjs upgrade migrate && node scripts/run-verification-command.mjs upgrade data && node scripts/check-upgrade.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

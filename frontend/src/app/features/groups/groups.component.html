@@ -6,6 +6,7 @@
     }
   </div>
 
+  <div class="card group-toolbar"><label class="archive-filter"><input type="checkbox" [ngModel]="archived()" (ngModelChange)="archived.set($event);load()"> Показать архив</label><input class="group-search" aria-label="Поиск группы" placeholder="Поиск группы" [ngModel]="search()" (ngModelChange)="search.set($event);load()"></div>
   @if (loading()) {
     <div class="card skeleton" style="height: 300px"></div>
   } @else {
@@ -13,16 +14,19 @@
       @for (g of groups(); track g.id) {
         <div class="card group-card">
           <div class="group-name">{{ g.name }}</div>
-          <div class="group-meta">{{ g.direction?.shortName }} · {{ g.currentCourse }} курс</div>
-          <div class="group-meta">Старшина: {{ currentForeman(g) }}</div>
+          <div class="group-meta">{{ g.program?.name ?? 'Образовательная программа не указана' }}</div>
+          <div class="group-meta">{{ g.currentCourse }} курс</div>
+          <div class="group-meta">Сотрудник УСП: {{ currentForeman(g) }}</div>
           <div class="group-footer">
-            <span class="badge" [class.badge-success]="g.isActive" [class.badge-neutral]="!g.isActive">
-              {{ g.isActive ? 'Активна' : 'Архив' }}
+            <span class="badge" [class.badge-success]="!g.isArchived" [class.badge-neutral]="g.isArchived">
+              {{ g.isArchived ? 'Архив' : 'Активна' }}
             </span>
 
-            @if (auth.isAdmin() && g.isActive) {
+            @if(auth.isAdmin() && g.isArchived){<button class="btn btn-secondary" (click)="restore(g)">Восстановить из архива</button>}
+            @if (auth.isAdmin() && !g.isArchived) {
               <div class="group-actions">
-                <button type="button" class="btn btn-ghost" (click)="openForemanModal(g)">Старшина</button>
+                <button type="button" class="btn btn-ghost" (click)="openEdit(g)">Изменить</button>
+                <button type="button" class="btn btn-ghost" (click)="openForemanModal(g)">Сотрудник УСП</button>
                 <button type="button" class="btn btn-ghost btn-danger" (click)="archive(g)">Архив</button>
               </div>
             }
@@ -40,24 +44,17 @@
 </div>
 
 @if (modalOpen()) {
-  <app-modal title="Новая группа" width="480px" (closed)="closeModal()">
+  <app-modal [title]="form().id ? 'Редактирование группы' : 'Новая группа'" width="480px" (closed)="closeModal()">
     <div class="group-form">
       <div class="form-field">
         <label>Название *</label>
         <input type="text" [ngModel]="form().name" (ngModelChange)="updateField('name', $event)" />
       </div>
       <div class="form-field">
-        <label>Направление *</label>
-        <select [ngModel]="form().directionId" (ngModelChange)="updateField('directionId', $event)">
-          <option value="" disabled>Выберите…</option>
-          @for (d of directions(); track d.id) { <option [value]="d.id">{{ d.name }}</option> }
-        </select>
-      </div>
-      <div class="form-field">
-        <label>Программа *</label>
+        <label>Образовательная программа *</label>
         <select [ngModel]="form().programId" (ngModelChange)="updateField('programId', $event)">
           <option value="" disabled>Выберите…</option>
-          @for (p of programsForDirection(form().directionId); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+          @for (p of programs(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
         </select>
       </div>
       <div class="form-field">
@@ -67,15 +64,15 @@
           @for (y of academicYears(); track y.id) { <option [value]="y.id">{{ y.name }}</option> }
         </select>
       </div>
-      <div class="form-field">
+      @if(!form().id){<div class="form-field">
         <label>Курс</label>
         <input type="number" min="1" max="10" [ngModel]="form().currentCourse" (ngModelChange)="updateField('currentCourse', $event)" />
-      </div>
+      </div>}
 
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" (click)="closeModal()">Отмена</button>
         <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
-          {{ saving() ? 'Сохранение…' : 'Создать' }}
+          {{ saving() ? 'Сохранение…' : (form().id ? 'Сохранить' : 'Создать') }}
         </button>
       </div>
     </div>
@@ -83,7 +80,7 @@
 }
 
 @if (foremanModalGroup(); as fg) {
-  <app-modal title="Назначить старшину" width="420px" (closed)="closeForemanModal()">
+  <app-modal title="Назначить сотрудника УСП" width="420px" (closed)="closeForemanModal()">
     <div class="form-field">
       <label>Группа «{{ fg.name }}»</label>
       <select [ngModel]="selectedForemanId()" (ngModelChange)="selectedForemanId.set($event)">

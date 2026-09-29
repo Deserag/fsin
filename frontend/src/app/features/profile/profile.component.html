@@ -1,0 +1,26 @@
+<div class="profile-page page-fade-in">
+  <div class="page-heading"><div><p class="eyebrow">Учётная запись</p><h1>Личный кабинет</h1><p>Контактные данные и безопасность профиля</p></div></div>
+  <div class="profile-grid">
+    <section class="card profile-card">
+      <div class="section-heading"><h2>Личные данные</h2><p>Эти сведения видны администратору системы.</p></div>
+      <div class="fields">
+        <div class="form-field"><label for="profile-login">Логин</label><input id="profile-login" [value]="auth.currentUser()?.login ?? ''" readonly></div>
+        <div class="form-field"><label for="profile-last">Фамилия</label><input id="profile-last" [(ngModel)]="form.lastName" autocomplete="family-name"></div>
+        <div class="form-field"><label for="profile-first">Имя</label><input id="profile-first" [(ngModel)]="form.firstName" autocomplete="given-name"></div>
+        <div class="form-field"><label for="profile-middle">Отчество</label><input id="profile-middle" [(ngModel)]="form.middleName"></div>
+        <div class="form-field"><label for="profile-phone">Телефон</label><input id="profile-phone" [(ngModel)]="form.phone" autocomplete="tel"></div>
+        <div class="form-field"><label for="profile-email">Электронная почта</label><input id="profile-email" type="email" [(ngModel)]="form.email" autocomplete="email"></div>
+      </div>
+      <div class="actions"><button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">{{ saving() ? 'Сохранение…' : 'Сохранить изменения' }}</button></div>
+    </section>
+    <section class="card profile-card security-card">
+      <div class="section-heading"><h2>Пароль</h2><p>После изменения потребуется войти снова.</p></div>
+      <div class="fields">
+        <div class="form-field"><label for="current-password">Текущий пароль</label><input id="current-password" type="password" [(ngModel)]="currentPassword" autocomplete="current-password"></div>
+        <div class="form-field"><label for="new-password">Новый пароль</label><input id="new-password" type="password" [(ngModel)]="newPassword" autocomplete="new-password"></div>
+        <div class="form-field"><label for="repeat-password">Повторите новый пароль</label><input id="repeat-password" type="password" [(ngModel)]="repeatPassword" autocomplete="new-password"></div>
+      </div>
+      <div class="actions"><button type="button" class="btn btn-secondary" [disabled]="changing()" (click)="changePassword()">{{ changing() ? 'Изменение…' : 'Изменить пароль' }}</button></div>
+    </section>
+  </div>
+</div>

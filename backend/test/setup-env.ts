@@ -1,5 +1,2 @@
-// Runs before any e2e test file's imports resolve. Points Prisma at an
-// isolated test database so e2e tests never touch the demo/dev data that
-// backs the running app.
-process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/fsin_crm_test?schema=public';
-process.env.NODE_ENV = 'test';
+if (!process.env.DATABASE_URL || !new URL(process.env.DATABASE_URL).pathname.startsWith('/fsin_verify_')) throw new Error('Tests require an isolated fsin_verify_ database');
+process.env.NODE_ENV='test';

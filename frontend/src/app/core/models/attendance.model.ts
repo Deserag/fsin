@@ -13,6 +13,7 @@ export interface AttendanceReason {
   code: string;
   name: string;
   requiresNote: boolean;
+  category: 'IN_INSTITUTE' | 'OUTSIDE';
 }
 
 export interface AttendanceSheet {
@@ -32,14 +33,16 @@ export interface AttendanceRecord {
   id: string;
   sheetId: string;
   studentId: string;
-  isPresent: boolean;
+  isPresent: boolean | null;
   reasonId?: string | null;
   note?: string | null;
-  student: { id: string; firstName: string; lastName: string; middleName?: string | null; currentCourse: number };
+  student: { id: string; firstName: string; lastName: string; middleName?: string | null; gender?: 'MALE' | 'FEMALE' | null; currentCourse: number };
   reason?: AttendanceReason | null;
 }
 
 export interface AttendanceSheetDetail extends AttendanceSheet {
+  returnComment?: string | null;
+  courseSnapshot?: number | null;
   records: AttendanceRecord[];
 }
 
@@ -52,12 +55,13 @@ export interface SheetValidation {
   absentWithoutReasonCount: number;
   isComplete: boolean;
   isValid: boolean;
+  unmarkedStudents: { studentId: string; studentName: string }[];
   absentWithoutReason: { studentId: string; studentName: string }[];
 }
 
 export interface BulkRecordUpdate {
   studentId: string;
-  isPresent: boolean;
+  isPresent: boolean | null;
   reasonId?: string;
   note?: string;
 }

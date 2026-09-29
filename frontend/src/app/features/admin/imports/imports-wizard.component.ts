@@ -12,8 +12,7 @@ const REQUIRED_FIELDS = [
   { key: 'birthDate', label: 'Дата рождения' },
   { key: 'groupName', label: 'Группа' },
   { key: 'currentCourse', label: 'Курс' },
-  { key: 'directionCode', label: 'Направление (код)' },
-  { key: 'programCode', label: 'Программа (код)' },
+  { key: 'programCode', label: 'Образовательная программа (код)' },
   { key: 'enrollmentYear', label: 'Год поступления' },
   { key: 'statusCode', label: 'Статус (код)' },
 ];
@@ -67,7 +66,7 @@ export class ImportsWizardComponent {
         const guess: Record<string, string> = {};
         const headerByLabel = new Map(res.headers.map((h) => [h.toLowerCase(), h]));
         for (const f of this.fields) {
-          const found = res.headers.find((h) => h.toLowerCase().includes(f.label.toLowerCase().slice(0, 4)));
+          const found = res.headers.find((h) => f.key === 'programCode' ? h.toLowerCase().includes('программ') : h.toLowerCase().includes(f.label.toLowerCase().slice(0, 4)));
           if (found) guess[f.key] = found;
         }
         this.mapping.set(guess);

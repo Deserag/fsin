@@ -59,6 +59,7 @@
   <app-modal [title]="form().id ? 'Редактирование студента' : 'Новый студент'" width="520px" (closed)="closeModal()">
     <div class="student-form">
       <div class="form-grid">
+        @if(form().id){<div class="form-field"><label>Дата изменения статуса / группы / курса</label><input type="date" [ngModel]="form().effectiveDate" (ngModelChange)="updateField('effectiveDate',$event)"></div>}
         <div class="form-field">
           <label>Фамилия *</label>
           <input type="text" [ngModel]="form().lastName" (ngModelChange)="updateField('lastName', $event)" />
@@ -70,6 +71,12 @@
         <div class="form-field">
           <label>Отчество</label>
           <input type="text" [ngModel]="form().middleName" (ngModelChange)="updateField('middleName', $event)" />
+        </div>
+        <div class="form-field">
+          <label>Пол (для сводки табеля)</label>
+          <select [ngModel]="form().gender" (ngModelChange)="updateField('gender', $event)">
+            <option value="">Не указан</option><option value="MALE">Мужской</option><option value="FEMALE">Женский</option>
+          </select>
         </div>
         <div class="form-field">
           <label>Дата рождения</label>
@@ -91,7 +98,7 @@
           </select>
         </div>
         <div class="form-field">
-          <label>Программа</label>
+          <label>Образовательная программа</label>
           <select [ngModel]="form().programId" (ngModelChange)="updateField('programId', $event)">
             <option value="">— не выбрана —</option>
             @for (p of programs(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }

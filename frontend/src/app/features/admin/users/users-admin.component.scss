@@ -40,3 +40,10 @@
 .user-form .form-field {
   margin-bottom: var(--space-3);
 }
+
+.scope-list { display: grid; gap: 2px; max-height: 180px; overflow-y: auto; overflow-x: hidden; padding: 4px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); }
+.scope-list .checkbox-item { display: flex; align-items: flex-start; gap: 9px; width: 100%; padding: 8px; border-radius: 6px; line-height: 1.35; overflow-wrap: anywhere; }
+.scope-list .checkbox-item:hover { background: var(--color-background); }
+.scope-list input[type=checkbox] { width: 16px; height: 16px; flex: none; margin: 1px 0 0; accent-color: var(--color-primary); }
+.scope-search { width: 100%; }
+.user-form small { color: var(--color-text-secondary); }

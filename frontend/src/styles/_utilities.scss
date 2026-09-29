@@ -25,10 +25,10 @@
 .btn-primary {
   background: var(--gradient-brand);
   color: var(--color-text-inverse);
-  box-shadow: 0 6px 16px -4px rgba(109, 74, 255, 0.45);
+  box-shadow: 0 4px 12px rgba(25, 77, 103, 0.18);
 
   &:hover:not(:disabled) {
-    box-shadow: 0 10px 22px -4px rgba(109, 74, 255, 0.55);
+    box-shadow: 0 7px 16px rgba(25, 77, 103, 0.22);
     transform: translateY(-1px);
   }
 }
@@ -118,6 +118,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  min-width: 0;
 
   label {
     font-size: var(--font-size-sm);
@@ -128,6 +129,9 @@
   input,
   select,
   textarea {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     font-family: inherit;
     font-size: var(--font-size-md);
     padding: 10px var(--space-3);
@@ -197,3 +201,19 @@
   background-clip: text;
   color: transparent;
 }
+
+.roster-overview { padding: 20px; }
+.roster-heading h3 { font-size: 17px; }
+.roster-heading span, .roster-note { color: var(--color-text-secondary); font-size: 12px; }
+.roster-heading span { display: block; margin-top: 5px; }
+.roster-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin: 18px 0; }
+.roster-metrics > div { display: flex; flex-direction: column; gap: 7px; padding: 13px; background: var(--color-background); border-radius: var(--radius-sm); }
+.roster-metrics span { color: var(--color-text-secondary); font-size: 12px; }
+.roster-metrics strong { font-size: 23px; }
+.roster-note { margin: -6px 0 18px; }
+.roster-categories { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 22px; }
+.roster-categories h4 { margin-bottom: 10px; font-size: 13px; }
+.category-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.category-grid > div { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 11px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 12px; }
+.category-grid strong { flex: none; font-size: 14px; }
+@media(max-width:700px){.roster-categories{grid-template-columns:1fr}.roster-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}

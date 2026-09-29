@@ -16,8 +16,8 @@ export class GroupsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser('organizationId') orgId: string) {
-    return this.groupsService.findOne(id, orgId);
+  findOne(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.groupsService.findOne(id, user.organizationId, user);
   }
 
   @Post()
@@ -37,6 +37,9 @@ export class GroupsController {
   assignForeman(@Param('id') groupId: string, @Body('userId') userId: string, @CurrentUser('organizationId') orgId: string, @CurrentUser('id') assignedBy: string) {
     return this.groupsService.assignForeman(groupId, userId, orgId, assignedBy);
   }
+
+  @Patch(':id/restore') @Roles('admin')
+  restore(@Param('id') id: string, @CurrentUser() user: any) { return this.groupsService.restore(id, user.organizationId, user.id); }
 
   @Patch(':id/archive')
   @Roles('admin')

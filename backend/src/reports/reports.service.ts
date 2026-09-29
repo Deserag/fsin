@@ -1,225 +1,54 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-
+import { groupScope, requirePermission } from '../auth/scope.js';
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  async getGroupReport(groupId: string, organizationId: string, query: any) {
-    const { dateFrom, dateTo, periodId } = query;
-
-    const where: any = {
-      groupId,
-      group: { organizationId },
-      ...(periodId && { periodId }),
-      ...(dateFrom || dateTo
-        ? { date: { ...(dateFrom && { gte: new Date(dateFrom) }), ...(dateTo && { lte: new Date(dateTo) }) } }
-        : {}),
-    };
-
-    const sheets = await this.prisma.attendanceSheet.findMany({
-      where,
-      include: {
-        period: true,
-        records: {
-          include: {
-            student: { select: { id: true, firstName: true, lastName: true } },
-            reason: true,
-          },
-        },
-      },
-      orderBy: { date: 'asc' },
-    });
-
-    const group = await this.prisma.group.findUnique({
-      where: { id: groupId },
-      include: { direction: true, program: true },
-    });
-
-    const totalRecords = sheets.reduce((acc, s) => acc + s.totalCount, 0);
-    const presentRecords = sheets.reduce((acc, s) => acc + s.presentCount, 0);
-    const absentRecords = sheets.reduce((acc, s) => acc + s.absentCount, 0);
-    const attendanceRate = totalRecords > 0 ? Math.round((presentRecords / totalRecords) * 100) : 0;
-
-    // Reasons breakdown
-    const reasonBreakdown: Record<string, number> = {};
-    for (const sheet of sheets) {
-      for (const record of sheet.records) {
-        if (!record.isPresent && record.reason) {
-          reasonBreakdown[record.reason.name] = (reasonBreakdown[record.reason.name] ?? 0) + 1;
-        }
-      }
-    }
-
-    return {
-      group,
-      period: { dateFrom, dateTo },
-      summary: {
-        totalSheets: sheets.length,
-        totalRecords,
-        presentRecords,
-        absentRecords,
-        attendanceRate,
-        reasonBreakdown,
-      },
-      sheets,
-    };
+ constructor(private readonly prisma: PrismaService) {}
+ filters(user:any,q:any):any {
+  const list=(v:any)=>v ? String(v).split(',').filter(Boolean) : undefined;
+  const from=q.from??q.dateFrom, to=q.to??q.dateTo;
+  const date=(s:string)=>{const d=new Date(s);if(!Number.isFinite(+d))throw new BadRequestException('Неверная дата отчета');return d;};
+  if(from&&to&&date(from)>date(to))throw new BadRequestException('Начало периода позже окончания');
+  const course=Number(q.course??q.courseNumber);
+  if((q.course||q.courseNumber)&&(!Number.isInteger(course)||course<1||course>10))throw new BadRequestException('Неверный курс');
+  return { ...(q.studentId&&{studentId:q.studentId}), ...(course&&{courseSnapshot:course}), ...(q.program&&{programSnapshotId:{in:list(q.program)}}), ...(q.statusId&&{statusSnapshotId:q.statusId}), ...(q.reasonId&&{reasonId:q.reasonId}),
+   sheet:{group:groupScope(user),...((q.group||q.groupId)&&{groupId:{in:list(q.group??q.groupId)}}),...(q.periodId&&{periodId:q.periodId}),...(q.academicYearId&&{academicYearSnapshotId:q.academicYearId}),...((from||to)&&{date:{...(from&&{gte:date(from)}),...(to&&{lt:new Date(+date(to)+86400000)})}})} };
+ }
+ async attendance(user:any,q:any,permission='REPORTS_READ') {
+  requirePermission(user,permission);
+  const where=this.filters(user,q);
+  // SQL aggregation runs in PostgreSQL; individual attendance rows are not shipped to the browser.
+  const buckets=await this.prisma.attendanceRecord.groupBy({by:['sheetId','isPresent','reasonId','courseSnapshot'],where,_count:true});
+  const sheetIds=[...new Set(buckets.map(b=>b.sheetId))];
+  const [sheets,reasons]=await Promise.all([this.prisma.attendanceSheet.findMany({where:{id:{in:sheetIds}},include:{group:true,period:true}}),this.prisma.attendanceReason.findMany({where:{organizationId:user.organizationId}})]);
+  const sheetMap=new Map(sheets.map(s=>[s.id,s])), reasonMap=new Map(reasons.map(r=>[r.id,r.name]));
+  const make=()=>({total:0,present:0,absent:0,unmarked:0,attendanceRate:0});
+  const summary=make(),daily=new Map<string,any>(),groups=new Map<string,any>(),courses=new Map<string,any>(),breakdown=new Map<string,any>();
+  const add=(target:any,b:any)=>{target.total+=b._count;if(b.isPresent===true)target.present+=b._count;else if(b.isPresent===false)target.absent+=b._count;else target.unmarked+=b._count;target.attendanceRate=target.present+target.absent?Math.round(target.present/(target.present+target.absent)*1000)/10:0;};
+  for(const b of buckets){const sheet=sheetMap.get(b.sheetId)!;const day=sheet.date.toISOString().slice(0,10),course=String(b.courseSnapshot??'unknown');
+   if(!daily.has(day))daily.set(day,{date:day,...make()});
+   if(!groups.has(sheet.groupId))groups.set(sheet.groupId,{id:sheet.groupId,name:sheet.group.name,...make()});
+   if(!courses.has(course))courses.set(course,{course:b.courseSnapshot,...make()});
+   for(const target of [summary,daily.get(day),groups.get(sheet.groupId),courses.get(course)])add(target,b);
+   if(b.isPresent===false){const key=b.reasonId??'unknown';if(!breakdown.has(key))breakdown.set(key,{id:key,name:reasonMap.get(key)??'Без причины',count:0});breakdown.get(key).count+=b._count;}
   }
-
-  async getStudentReport(studentId: string, organizationId: string, query: any) {
-    const { dateFrom, dateTo } = query;
-
-    const student = await this.prisma.student.findFirst({
-      where: { id: studentId, organizationId },
-      include: { status: true, program: { include: { direction: true } }, currentGroup: true },
-    });
-
-    const records = await this.prisma.attendanceRecord.findMany({
-      where: {
-        studentId,
-        sheet: {
-          group: { organizationId },
-          ...(dateFrom || dateTo
-            ? { date: { ...(dateFrom && { gte: new Date(dateFrom) }), ...(dateTo && { lte: new Date(dateTo) }) } }
-            : {}),
-        },
-      },
-      include: {
-        sheet: { include: { group: { select: { id: true, name: true } }, period: true } },
-        reason: true,
-      },
-      orderBy: { sheet: { date: 'desc' } },
-    });
-
-    const total = records.length;
-    const present = records.filter((r) => r.isPresent).length;
-    const absent = records.filter((r) => !r.isPresent).length;
-
-    return {
-      student,
-      summary: {
-        total,
-        present,
-        absent,
-        attendanceRate: total > 0 ? Math.round((present / total) * 100) : 0,
-      },
-      records,
-    };
-  }
-
-  async getSummaryReport(organizationId: string, query: any) {
-    const { dateFrom, dateTo, directionId, courseNumber } = query;
-
-    const groups = await this.prisma.group.findMany({
-      where: {
-        organizationId,
-        isActive: true,
-        ...(directionId && { directionId }),
-        ...(courseNumber && { currentCourse: parseInt(courseNumber) }),
-      },
-      include: {
-        direction: true,
-        program: true,
-        _count: { select: { students: true } },
-        attendanceSheets: {
-          where: {
-            ...(dateFrom || dateTo
-              ? { date: { ...(dateFrom && { gte: new Date(dateFrom) }), ...(dateTo && { lte: new Date(dateTo) }) } }
-              : {}),
-          },
-          select: { presentCount: true, absentCount: true, totalCount: true, status: true },
-        },
-      },
-      orderBy: { name: 'asc' },
-    });
-
-    const result = groups.map((group) => {
-      const totalRecords = group.attendanceSheets.reduce((a, s) => a + s.totalCount, 0);
-      const presentRecords = group.attendanceSheets.reduce((a, s) => a + s.presentCount, 0);
-      const absentRecords = group.attendanceSheets.reduce((a, s) => a + s.absentCount, 0);
-      const rate = totalRecords > 0 ? Math.round((presentRecords / totalRecords) * 100) : null;
-
-      return {
-        id: group.id,
-        name: group.name,
-        direction: group.direction,
-        program: group.program,
-        studentCount: group._count.students,
-        totalSheets: group.attendanceSheets.length,
-        totalRecords,
-        presentRecords,
-        absentRecords,
-        attendanceRate: rate,
-      };
-    });
-
-    return {
-      period: { dateFrom, dateTo },
-      groups: result,
-      totals: {
-        groupCount: result.length,
-        totalRecords: result.reduce((a, g) => a + g.totalRecords, 0),
-        presentRecords: result.reduce((a, g) => a + g.presentRecords, 0),
-        absentRecords: result.reduce((a, g) => a + g.absentRecords, 0),
-        avgAttendanceRate: result.length
-          ? Math.round(result.filter((g) => g.attendanceRate !== null).reduce((a, g) => a + (g.attendanceRate ?? 0), 0) / result.length)
-          : null,
-      },
-    };
-  }
-
-  async getDashboardStats(organizationId: string, userContext: any) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    if (userContext.roles.includes('admin')) {
-      const [studentCount, groupCount, userCount, todaySheets, recentAuditLogs] = await Promise.all([
-        this.prisma.student.count({ where: { organizationId, isActive: true } }),
-        this.prisma.group.count({ where: { organizationId, isActive: true } }),
-        this.prisma.user.count({ where: { organizationId, isActive: true } }),
-        this.prisma.attendanceSheet.findMany({
-          where: { group: { organizationId }, date: { gte: today, lt: tomorrow } },
-          include: { group: { select: { id: true, name: true } }, period: true },
-        }),
-        this.prisma.auditLog.findMany({
-          where: { organizationId },
-          include: { user: { select: { id: true, firstName: true, lastName: true } } },
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        }),
-      ]);
-
-      return { role: 'admin', studentCount, groupCount, userCount, todaySheets, recentAuditLogs };
-    }
-
-    if (userContext.roles.includes('foreman')) {
-      const groupIds = userContext.groupScopeIds;
-      const todaySheets = await this.prisma.attendanceSheet.findMany({
-        where: { groupId: { in: groupIds }, date: { gte: today, lt: tomorrow } },
-        include: { group: { select: { id: true, name: true } }, period: true },
-      });
-
-      const myGroups = await this.prisma.group.findMany({
-        where: { id: { in: groupIds } },
-        include: { _count: { select: { students: true } } },
-      });
-
-      return { role: 'foreman', myGroups, todaySheets };
-    }
-
-    // manager
-    const directionIds = userContext.directionScopeIds ?? [];
-    const groups = await this.prisma.group.findMany({
-      where: { organizationId, directionId: { in: directionIds }, isActive: true },
-      include: { _count: { select: { students: true } } },
-    });
-
-    const unfilled = await this.prisma.attendanceSheet.count({
-      where: { groupId: { in: groups.map((g) => g.id) }, date: { gte: today, lt: tomorrow }, status: 'DRAFT' },
-    });
-
-    return { role: 'manager', groups, unfilledSheetsToday: unfilled };
-  }
+  const students=q.group||q.groupId||q.studentId ? await this.prisma.attendanceRecord.groupBy({by:['studentId','courseSnapshot','statusSnapshotId','isPresent'],where,_count:true}):[];
+  const names=students.length?await this.prisma.student.findMany({where:{id:{in:[...new Set(students.map(s=>s.studentId))]}},select:{id:true,firstName:true,lastName:true,middleName:true}}):[];
+  const studentMap=new Map<string,any>();
+  for(const b of students){const key=`${b.studentId}:${b.courseSnapshot}:${b.statusSnapshotId}`;if(!studentMap.has(key)){const s=names.find(s=>s.id===b.studentId)!;studentMap.set(key,{id:key,studentId:b.studentId,name:`${s.lastName} ${s.firstName} ${s.middleName??''}`,course:b.courseSnapshot,statusId:b.statusSnapshotId,...make()});}add(studentMap.get(key),b);}
+  return {summary,daily:[...daily.values()].sort((a,b)=>a.date.localeCompare(b.date)),groups:[...groups.values()].sort((a,b)=>a.name.localeCompare(b.name)),courses:[...courses.values()],reasons:[...breakdown.values()],students:[...studentMap.values()],unknownHistoryCount:buckets.filter(b=>b.courseSnapshot===null).reduce((a,b)=>a+b._count,0)};
+ }
+ async getGroupReport(id:string,user:any,q:any){const report=await this.attendance(user,{...q,group:id});return {...report,group:report.groups[0]??null,summary:{...report.summary,totalRecords:report.summary.total,presentRecords:report.summary.present,absentRecords:report.summary.absent,reasonBreakdown:Object.fromEntries(report.reasons.map(r=>[r.name,r.count]))}};}
+ getStudentReport(id:string,user:any,q:any){return this.attendance(user,{...q,studentId:id});}
+ async getSummaryReport(user:any,q:any){const report=await this.attendance(user,q);return {...report,totals:{groupCount:report.groups.length,totalRecords:report.summary.total,presentRecords:report.summary.present,absentRecords:report.summary.absent,avgAttendanceRate:report.summary.attendanceRate}};}
+ async getDashboardStats(organizationId:string,user:any,q:any={}) {
+  requirePermission(user,'ATTENDANCE_READ');
+  const scope=groupScope(user),today=new Date(new Date().toISOString().slice(0,10));
+  const [studentCount,groupCount,periodCount,todaySheets,pendingCount,analytics]=await Promise.all([
+   this.prisma.student.count({where:{organizationId,isActive:true,status:{isTerminal:false,countsInAttendance:true},currentGroup:scope}}),
+   this.prisma.group.count({where:{...scope,isActive:true,isArchived:false}}),this.prisma.attendancePeriod.count({where:{organizationId,isActive:true}}),
+   this.prisma.attendanceSheet.findMany({where:{group:scope,date:{gte:today,lt:new Date(+today+86400000)}},include:{group:true,period:true}}),
+   this.prisma.attendanceSheet.count({where:{group:scope,status:'SUBMITTED'}}),this.attendance(user,q,'ATTENDANCE_READ')]);
+  return {studentCount,groupCount,pendingCount,absentToday:todaySheets.reduce((a,s)=>a+s.absentCount,0),unfilledSheetsToday:Math.max(0,groupCount*periodCount-todaySheets.length)+todaySheets.filter(s=>s.status==='DRAFT').length,todaySheets,analytics};
+ }
 }

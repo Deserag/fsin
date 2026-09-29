@@ -1,5 +1,5 @@
 <div class="modal-backdrop" (click)="onBackdropClick()">
-  <div class="modal-panel" [style.maxWidth]="width" (click)="$event.stopPropagation()">
+  <div class="modal-panel" role="dialog" aria-modal="true" [attr.aria-label]="title" [style.maxWidth]="width" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h3>{{ title }}</h3>
       <button type="button" class="modal-close" (click)="closed.emit()" aria-label="Закрыть">×</button>

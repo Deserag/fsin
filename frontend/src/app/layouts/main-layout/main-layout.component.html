@@ -1,25 +1,17 @@
 <div class="shell">
   <aside class="sidebar">
-    <a routerLink="/dashboard" class="brand">
-      <span class="brand-mark">ФСИН</span>
-      <span class="brand-text">Контингент</span>
-    </a>
-
-    <nav class="nav">
-      <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Главная</a>
-
-      @if (auth.isForeman() || auth.isAdmin() || auth.isManager()) {
-        <a routerLink="/attendance" routerLinkActive="active" class="nav-link">Табель</a>
-      }
-
+    <a routerLink="/dashboard" class="brand"><span class="brand-mark">ВИ</span><span class="brand-text"><strong>ВИ ФСИН России</strong><small>Учёт контингента</small></span></a>
+    <nav class="nav" aria-label="Основная навигация">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Обзор</a>
+      @if (auth.isForeman() || auth.isAdmin() || auth.isManager()) {<a routerLink="/attendance" routerLinkActive="active" class="nav-link">Табели</a>}
+      @if(auth.hasPermission('ATTENDANCE_REVIEW') || auth.hasPermission('ATTENDANCE_CLOSE')) {<a routerLink="/attendance-review" routerLinkActive="active" class="nav-link">Проверка табелей</a>}
       @if (auth.isAdmin() || auth.isManager()) {
         <a routerLink="/students" routerLinkActive="active" class="nav-link">Студенты</a>
         <a routerLink="/groups" routerLinkActive="active" class="nav-link">Группы</a>
         <a routerLink="/reports" routerLinkActive="active" class="nav-link">Отчёты</a>
       }
-
       @if (auth.isAdmin()) {
-        <div class="nav-section-label">Администрирование</div>
+        <div class="nav-section-label">Управление</div>
         <a routerLink="/admin/users" routerLinkActive="active" class="nav-link">Пользователи</a>
         <a routerLink="/admin/roles" routerLinkActive="active" class="nav-link">Роли и права</a>
         <a routerLink="/admin/reference" routerLinkActive="active" class="nav-link">Справочники</a>
@@ -29,22 +21,20 @@
         <a routerLink="/admin/audit" routerLinkActive="active" class="nav-link">Журнал аудита</a>
       }
     </nav>
+    <div class="sidebar-footer">Воронежский институт ФСИН России</div>
   </aside>
-
   <div class="main">
     <header class="topbar">
-      <div class="topbar-spacer"></div>
-      <div class="user-menu">
-        <div class="user-info">
-          <span class="user-name">{{ auth.currentUser()?.lastName }} {{ auth.currentUser()?.firstName }}</span>
-          <span class="user-role badge badge-neutral">{{ auth.roles()[0] }}</span>
+      <span class="topbar-context">Система учёта контингента</span>
+      <details class="account-menu">
+        <summary aria-label="Меню пользователя"><span class="avatar">{{ initials() }}</span><span class="account-name">{{ auth.currentUser()?.firstName }} {{ auth.currentUser()?.lastName }}</span><span class="chevron">⌄</span></summary>
+        <div class="account-dropdown">
+          <div class="account-caption"><strong>{{ auth.currentUser()?.firstName }} {{ auth.currentUser()?.lastName }}</strong><span>{{ roleLabel(auth.roles()[0]) }}</span></div>
+          <a routerLink="/profile" (click)="closeAccountMenu()">Личный кабинет</a>
+          <button type="button" (click)="logout()">Выйти</button>
         </div>
-        <button type="button" class="btn btn-ghost" (click)="logout()">Выйти</button>
-      </div>
+      </details>
     </header>
-
-    <main class="content">
-      <router-outlet></router-outlet>
-    </main>
+    <main class="content"><router-outlet></router-outlet></main>
   </div>
 </div>

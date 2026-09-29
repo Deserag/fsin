@@ -1,3 +1,4 @@
+import { referenceData, safeReferenceDelete } from './reference-utils.js';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 
@@ -5,6 +6,11 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export class SettingsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  updateReference(model: string, id: string, organizationId: string, dto: any) {
+    const fields = model === 'studentStatus' ? ['code','name','isTerminal','countsInAttendance','isActive','sortOrder'] : ['code','name','startTime','endTime','isActive','sortOrder'];
+    return (this.prisma as any)[model].update({ where: { id, organizationId }, data: referenceData(dto, fields) });
+  }
+  removeReference(model: string, id: string, organizationId: string) { return safeReferenceDelete(this.prisma, model, id, organizationId); }
   async findAll(organizationId: string) {
     const settings = await this.prisma.systemSetting.findMany({ where: { organizationId } });
     return settings.reduce((acc: any, s) => { acc[s.key] = s.value; return acc; }, {});
@@ -23,20 +29,20 @@ export class SettingsService {
   }
 
   async createStudentStatus(organizationId: string, dto: any) {
-    return this.prisma.studentStatus.create({ data: { ...dto, organizationId } });
+    return this.prisma.studentStatus.create({ data: { ...referenceData(dto, ['code','name','isTerminal','countsInAttendance','isActive','sortOrder','startTime','endTime'], true), organizationId } });
   }
 
   async getAttendancePeriods(organizationId: string) {
-    return this.prisma.attendancePeriod.findMany({ where: { organizationId, isActive: true }, orderBy: { sortOrder: 'asc' } });
+    return this.prisma.attendancePeriod.findMany({ where: { organizationId }, orderBy: { sortOrder: 'asc' } });
   }
 
   async createAttendancePeriod(organizationId: string, dto: any) {
-    return this.prisma.attendancePeriod.create({ data: { ...dto, organizationId } });
+    return this.prisma.attendancePeriod.create({ data: { ...referenceData(dto, ['code','name','isTerminal','countsInAttendance','isActive','sortOrder','startTime','endTime'], true), organizationId } });
   }
 
   async getAttendanceFields(organizationId: string) {
     return this.prisma.attendanceField.findMany({
-      where: { organizationId, isActive: true },
+      where: { organizationId },
       include: { options: { orderBy: { sortOrder: 'asc' } } },
       orderBy: { sortOrder: 'asc' },
     });

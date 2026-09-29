@@ -1,14 +1,14 @@
 :root {
-  // Brand — vivid indigo/violet with an electric accent
-  --color-primary: #6d4aff;
-  --color-primary-hover: #5a37f0;
-  --color-primary-soft: #f1edff;
-  --color-secondary: #0ea5e9;
-  --color-accent: #ff5fa2;
+  // Calm institutional palette shared by every screen.
+  --color-primary: #194d67;
+  --color-primary-hover: #123c52;
+  --color-primary-soft: #e9f3f6;
+  --color-secondary: #267f83;
+  --color-accent: #267f83;
 
-  --gradient-brand: linear-gradient(135deg, #6d4aff 0%, #8b5cf6 45%, #ff5fa2 100%);
-  --gradient-brand-soft: linear-gradient(135deg, #f1edff 0%, #fdeef6 100%);
-  --gradient-text: linear-gradient(135deg, #6d4aff 0%, #ff5fa2 100%);
+  --gradient-brand: linear-gradient(135deg, #194d67 0%, #267f83 100%);
+  --gradient-brand-soft: linear-gradient(135deg, #e9f3f6 0%, #e9f5f2 100%);
+  --gradient-text: linear-gradient(135deg, #194d67 0%, #267f83 100%);
 
   // Semantic
   --color-success: #12b76a;
@@ -20,15 +20,15 @@
   --color-neutral: #667085;
 
   // Surfaces
-  --color-background: #f7f6fb;
+  --color-background: #f5f7f8;
   --color-surface: #ffffff;
   --color-surface-raised: #ffffff;
-  --color-border: #ebe8f5;
-  --color-border-strong: #d8d3ec;
+  --color-border: #e2e8eb;
+  --color-border-strong: #c7d3d9;
 
   // Text
-  --color-text-primary: #17152b;
-  --color-text-secondary: #6c6884;
+  --color-text-primary: #182b35;
+  --color-text-secondary: #607480;
   --color-text-inverse: #ffffff;
 
   // Typography
@@ -50,83 +50,19 @@
   --space-7: 48px;
 
   // Radius / shadow
-  --radius-sm: 10px;
-  --radius-md: 16px;
-  --radius-lg: 22px;
-  --shadow-sm: 0 1px 2px rgba(23, 21, 43, 0.06), 0 1px 1px rgba(23, 21, 43, 0.04);
-  --shadow-md: 0 12px 28px -8px rgba(109, 74, 255, 0.18), 0 4px 10px -4px rgba(23, 21, 43, 0.06);
-  --shadow-glow: 0 0 0 1px rgba(109, 74, 255, 0.08), 0 8px 24px rgba(109, 74, 255, 0.16);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 3px rgba(20, 47, 61, 0.06);
+  --shadow-md: 0 16px 36px rgba(20, 47, 61, 0.14);
+  --shadow-glow: 0 8px 28px rgba(20, 47, 61, 0.12);
 
   // Layout
-  --sidebar-width: 252px;
+  --sidebar-width: 240px;
   --topbar-height: 64px;
 
   // Motion
   --transition-fast: 140ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 220ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-bounce: 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --color-primary: #8b6bff;
-    --color-primary-hover: #9d80ff;
-    --color-primary-soft: #241f3d;
-    --color-secondary: #38bdf8;
-    --color-accent: #ff7cb5;
-
-    --gradient-brand: linear-gradient(135deg, #7c5cff 0%, #a78bfa 45%, #ff7cb5 100%);
-    --gradient-brand-soft: linear-gradient(135deg, #241f3d 0%, #2e2138 100%);
-
-    --color-success: #32d583;
-    --color-success-soft: #123527;
-    --color-warning: #fdb022;
-    --color-warning-soft: #3a2a10;
-    --color-danger: #f97066;
-    --color-danger-soft: #3a1917;
-    --color-neutral: #94919f;
-
-    --color-background: #100e1c;
-    --color-surface: #18152a;
-    --color-surface-raised: #201c35;
-    --color-border: #2b2745;
-    --color-border-strong: #3c3760;
-
-    --color-text-primary: #f3f1fb;
-    --color-text-secondary: #a8a4c0;
-    --color-text-inverse: #17152b;
-
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 12px 28px -8px rgba(0, 0, 0, 0.45), 0 4px 10px -4px rgba(0, 0, 0, 0.3);
-    --shadow-glow: 0 0 0 1px rgba(139, 107, 255, 0.15), 0 8px 24px rgba(139, 107, 255, 0.25);
-  }
-}
-
-:root[data-theme='dark'] {
-  --color-primary: #8b6bff;
-  --color-primary-hover: #9d80ff;
-  --color-primary-soft: #241f3d;
-  --color-secondary: #38bdf8;
-  --color-accent: #ff7cb5;
-
-  --gradient-brand: linear-gradient(135deg, #7c5cff 0%, #a78bfa 45%, #ff7cb5 100%);
-  --gradient-brand-soft: linear-gradient(135deg, #241f3d 0%, #2e2138 100%);
-
-  --color-success: #32d583;
-  --color-success-soft: #123527;
-  --color-warning: #fdb022;
-  --color-warning-soft: #3a2a10;
-  --color-danger: #f97066;
-  --color-danger-soft: #3a1917;
-  --color-neutral: #94919f;
-
-  --color-background: #100e1c;
-  --color-surface: #18152a;
-  --color-surface-raised: #201c35;
-  --color-border: #2b2745;
-  --color-border-strong: #3c3760;
-
-  --color-text-primary: #f3f1fb;
-  --color-text-secondary: #a8a4c0;
-  --color-text-inverse: #17152b;
 }

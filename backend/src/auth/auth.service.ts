@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service.js';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
+import { UpdateProfileDto } from './dto/update-profile.dto.js';
 
 @Injectable()
 export class AuthService {
@@ -18,9 +19,9 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async validateUser(email: string, password: string) {
+  async validateUser(login: string, password: string) {
     const user = await this.prisma.user.findUnique({
-      where: { email },
+      where: { login: login.trim() },
       include: {
         roles: {
           include: {
@@ -34,18 +35,18 @@ export class AuthService {
       },
     });
 
-    if (!user) throw new UnauthorizedException('Неверный email или пароль');
+    if (!user) throw new UnauthorizedException('Неверный логин или пароль');
     if (!user.isActive) throw new UnauthorizedException('Учётная запись неактивна');
     if (user.isBlocked) throw new UnauthorizedException('Учётная запись заблокирована');
 
     const passwordValid = await argon2.verify(user.passwordHash, password);
-    if (!passwordValid) throw new UnauthorizedException('Неверный email или пароль');
+    if (!passwordValid) throw new UnauthorizedException('Неверный логин или пароль');
 
     return user;
   }
 
-  async login(email: string, password: string) {
-    const user = await this.validateUser(email, password);
+  async login(login: string, password: string) {
+    const user = await this.validateUser(login, password);
 
     // Update last login
     await this.prisma.user.update({
@@ -60,6 +61,7 @@ export class AuthService {
 
     const payload = {
       sub: user.id,
+      login: user.login,
       email: user.email,
       orgId: user.organizationId,
       roles,
@@ -87,7 +89,8 @@ export class AuthService {
       refreshToken: refreshTokenValue,
       user: {
         id: user.id,
-        email: user.email,
+        login: user.login,
+      email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         middleName: user.middleName,
@@ -126,11 +129,7 @@ export class AuthService {
       throw new UnauthorizedException('Учётная запись заблокирована');
     }
 
-    // Revoke old token
-    await this.prisma.refreshToken.update({
-      where: { id: tokenRecord.id },
-      data: { revokedAt: new Date() },
-    });
+
 
     const user = tokenRecord.user;
     const roles = user.roles.map((ur) => ur.role.name);
@@ -140,6 +139,7 @@ export class AuthService {
 
     const payload = {
       sub: user.id,
+      login: user.login,
       email: user.email,
       orgId: user.organizationId,
       roles,
@@ -154,8 +154,10 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
-    await this.prisma.refreshToken.create({
-      data: { userId: user.id, token: newRefreshToken, expiresAt },
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.refreshToken.updateMany({ where: { id: tokenRecord.id, revokedAt: null }, data: { revokedAt: new Date() } });
+      if (claimed.count !== 1) throw new UnauthorizedException('Сессия уже обновлена');
+      await tx.refreshToken.create({ data: { userId: user.id, token: newRefreshToken, expiresAt } });
     });
 
     return { accessToken, refreshToken: newRefreshToken };
@@ -195,6 +197,7 @@ export class AuthService {
         roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } },
         groupScopes: { include: { group: { select: { id: true, name: true } } } },
         directionScopes: { include: { direction: { select: { id: true, name: true } } } },
+        programScopes: { include: { program: { select: { id: true, name: true, code: true } } } },
       },
     });
 
@@ -202,6 +205,7 @@ export class AuthService {
 
     return {
       id: user.id,
+      login: user.login,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -212,6 +216,24 @@ export class AuthService {
       permissions: user.roles.flatMap((ur) => ur.role.permissions.map((rp) => rp.permission.code)),
       groupScopes: user.groupScopes.map((gs) => gs.group),
       directionScopes: user.directionScopes.map((ds) => ds.direction),
+      programScopes: user.programScopes.map((ps) => ps.program),
     };
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    if (!dto.firstName?.trim() || !dto.lastName?.trim()) throw new BadRequestException('Укажите имя и фамилию');
+    const account = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!account) throw new NotFoundException('Пользователь не найден');
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName.trim(),
+        middleName: dto.middleName?.trim() || null,
+        phone: dto.phone?.trim() || null,
+        email: dto.email?.trim() || null,
+      },
+    });
+    return this.getProfile(userId);
   }
 }

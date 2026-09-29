@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import * as argon2 from 'argon2';
 
@@ -18,6 +18,7 @@ export class UsersService {
           { lastName: { contains: search, mode: 'insensitive' } },
           { firstName: { contains: search, mode: 'insensitive' } },
           { email: { contains: search, mode: 'insensitive' } },
+          { login: { contains: search, mode: 'insensitive' } },
         ],
       }),
       ...(roleId && { roles: { some: { roleId } } }),
@@ -29,11 +30,12 @@ export class UsersService {
         skip,
         take: limit,
         select: {
-          id: true, email: true, firstName: true, lastName: true, middleName: true,
+          id: true, login: true, email: true, firstName: true, lastName: true, middleName: true,
           phone: true, isActive: true, isBlocked: true, lastLoginAt: true, createdAt: true,
           roles: { include: { role: true } },
           groupScopes: { include: { group: { select: { id: true, name: true } } } },
           directionScopes: { include: { direction: { select: { id: true, name: true } } } },
+          programScopes: { include: { program: { select: { id: true, name: true, code: true } } } },
         },
         orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
       }),
@@ -47,12 +49,13 @@ export class UsersService {
     const user = await this.prisma.user.findFirst({
       where: { id, organizationId },
       select: {
-        id: true, email: true, firstName: true, lastName: true, middleName: true,
+        id: true, login: true, email: true, firstName: true, lastName: true, middleName: true,
         phone: true, isActive: true, isBlocked: true, blockedAt: true, blockedReason: true,
         lastLoginAt: true, createdAt: true,
         roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } },
         groupScopes: { include: { group: { select: { id: true, name: true } } } },
         directionScopes: { include: { direction: { select: { id: true, name: true } } } },
+        programScopes: { include: { program: { select: { id: true, name: true, code: true } } } },
       },
     });
     if (!user) throw new NotFoundException('Пользователь не найден');
@@ -60,8 +63,10 @@ export class UsersService {
   }
 
   async create(dto: any, createdBy: string) {
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (existing) throw new ConflictException('Пользователь с таким email уже существует');
+    if (typeof dto.login !== 'string' || !dto.login.trim() || typeof dto.password !== 'string' || dto.password.length < 8) throw new BadRequestException('Укажите логин и пароль не короче 8 символов');
+    dto.login = dto.login.trim();
+    const existing = await this.prisma.user.findUnique({ where: { login: dto.login } });
+    if (existing) throw new ConflictException('Пользователь с таким логином уже существует');
 
     const passwordHash = await argon2.hash(dto.password);
 
@@ -69,7 +74,8 @@ export class UsersService {
       const u = await tx.user.create({
         data: {
           organizationId: dto.organizationId,
-          email: dto.email,
+          login: dto.login,
+          email: dto.email || null,
           passwordHash,
           firstName: dto.firstName,
           lastName: dto.lastName,
@@ -84,6 +90,21 @@ export class UsersService {
         });
       }
 
+      if (dto.groupScopeIds?.length) {
+        const count = await tx.group.count({ where: { id: { in: dto.groupScopeIds }, organizationId: dto.organizationId } });
+        if (count !== new Set(dto.groupScopeIds).size) throw new BadRequestException('Группа другой организации');
+        await tx.userGroupScope.createMany({ data: dto.groupScopeIds.map((groupId: string) => ({ userId: u.id, groupId })), skipDuplicates: true });
+      }
+      if (dto.directionScopeIds?.length) {
+        const count = await tx.direction.count({ where: { id: { in: dto.directionScopeIds }, organizationId: dto.organizationId } });
+        if (count !== new Set(dto.directionScopeIds).size) throw new BadRequestException('Направление другой организации');
+        await tx.userDirectionScope.createMany({ data: dto.directionScopeIds.map((directionId: string) => ({ userId: u.id, directionId })), skipDuplicates: true });
+      }
+      if (dto.programScopeIds?.length) {
+        const count = await tx.educationalProgram.count({ where: { id: { in: dto.programScopeIds }, organizationId: dto.organizationId } });
+        if (count !== new Set(dto.programScopeIds).size) throw new BadRequestException('Образовательная программа другой организации');
+        await tx.userProgramScope.createMany({ data: dto.programScopeIds.map((programId: string) => ({ userId: u.id, programId })), skipDuplicates: true });
+      }
       await tx.auditLog.create({
         data: {
           organizationId: dto.organizationId,
@@ -105,7 +126,18 @@ export class UsersService {
     const existing = await this.prisma.user.findFirst({ where: { id, organizationId } });
     if (!existing) throw new NotFoundException('Пользователь не найден');
 
+    for (const [key, model] of [['groupScopeIds','group'],['directionScopeIds','direction'],['programScopeIds','educationalProgram']]) {
+      if (dto[key]) {
+        const count = await (this.prisma as any)[model].count({ where: { id: { in: dto[key] }, organizationId } });
+        if (count !== new Set(dto[key]).size) throw new BadRequestException('Область доступа другой организации');
+      }
+    }
     const updateData: any = {};
+    if (dto.login !== undefined) {
+      if (typeof dto.login !== 'string' || !dto.login.trim()) throw new BadRequestException('Укажите логин');
+      updateData.login = dto.login.trim();
+    }
+    if (dto.email !== undefined) updateData.email = dto.email || null;
     if (dto.firstName) updateData.firstName = dto.firstName;
     if (dto.lastName) updateData.lastName = dto.lastName;
     if (dto.middleName !== undefined) updateData.middleName = dto.middleName;
@@ -141,6 +173,14 @@ export class UsersService {
           });
         }
       }
+      if (dto.programScopeIds !== undefined) {
+        // Once edited in the new UI, program selections replace legacy direction-wide access.
+        await tx.userDirectionScope.deleteMany({ where: { userId: id } });
+        await tx.userProgramScope.deleteMany({ where: { userId: id } });
+        if (dto.programScopeIds.length > 0) {
+          await tx.userProgramScope.createMany({ data: dto.programScopeIds.map((programId: string) => ({ userId: id, programId })), skipDuplicates: true });
+        }
+      }
 
       await tx.auditLog.create({
         data: {
@@ -157,6 +197,7 @@ export class UsersService {
   }
 
   async block(id: string, organizationId: string, reason: string, blockedBy: string) {
+    await this.findOne(id, organizationId);
     await this.prisma.user.update({
       where: { id },
       data: { isBlocked: true, blockedAt: new Date(), blockedReason: reason },
@@ -168,6 +209,7 @@ export class UsersService {
   }
 
   async unblock(id: string, organizationId: string, unblockedBy: string) {
+    await this.findOne(id, organizationId);
     await this.prisma.user.update({
       where: { id },
       data: { isBlocked: false, blockedAt: null, blockedReason: null },

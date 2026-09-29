@@ -48,6 +48,18 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
+  input, select {
+    min-height: 38px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font: inherit;
+    font-size: 13px;
+  }
 }
 
 .search-input {
@@ -114,11 +126,16 @@
   }
 
   select {
+    max-width: 220px;
+    min-height: 36px;
     padding: var(--space-1) var(--space-2);
     border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
     font-size: var(--font-size-sm);
   }
+  input:not([type=checkbox]) { min-height: 36px; padding: 7px 10px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-primary); font: inherit; font-size: 13px; }
 }
 
 .presence-toggle {
@@ -139,3 +156,5 @@
 .text-muted {
   color: var(--color-text-secondary);
 }
+
+.students-table input[type=checkbox]{width:24px;height:24px;cursor:pointer;accent-color:var(--color-primary)}.select-col{min-width:48px;padding:12px}.students-table tr.selected{background:var(--color-primary-soft)}.students-table tbody tr{cursor:pointer}.students-table h3{padding:16px}.validation-bar details{padding:12px}.students-table input:not([type=checkbox]){min-width:160px}

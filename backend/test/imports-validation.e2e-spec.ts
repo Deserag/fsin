@@ -45,10 +45,10 @@ describe('Excel import — no hidden partial import (e2e)', () => {
     // instead of 12 total / 2 errors.
     const rows: (string | number)[][] = [];
     for (let i = 0; i < 10; i++) {
-      rows.push([`Фамилия${i}`, `Имя${i}`, 'Отчество', '2000-01-01', '201', 2, 'LAW', 'LAW_BACH', 2024, 'STUDYING']);
+      rows.push([`Фамилия${i}`, `Имя${i}`, 'Отчество', '2000-01-01', '201', 2, 'LAW', '40.03.01', 2024, 'STUDYING']);
     }
-    rows.push(['Ошибка1', 'Тест', '', '2000-01-01', 'НЕСУЩЕСТВУЕТ', 2, 'LAW', 'LAW_BACH', 2024, 'STUDYING']);
-    rows.push(['Ошибка2', 'Тест', '', '2000-01-01', 'НЕСУЩЕСТВУЕТ', 2, 'LAW', 'LAW_BACH', 2024, 'STUDYING']);
+    rows.push(['Ошибка1', 'Тест', '', '2000-01-01', 'НЕСУЩЕСТВУЕТ', 2, 'LAW', '40.03.01', 2024, 'STUDYING']);
+    rows.push(['Ошибка2', 'Тест', '', '2000-01-01', 'НЕСУЩЕСТВУЕТ', 2, 'LAW', '40.03.01', 2024, 'STUDYING']);
 
     const buffer = await buildWorkbook(rows);
     const parse = await request(app.getHttpServer())

@@ -35,8 +35,8 @@ describe('Attendance sheet lifecycle (e2e)', () => {
     return `${d.toISOString().slice(0, 10)}T00:00:00.000Z`;
   }
 
-  it('creating a sheet marks every active student present by default', async () => {
-    const date = isoDate(-1);
+  it('creating a sheet requires explicit marks for each student', async () => {
+    const date = isoDate(30 + 1);
     const sheet = await request(app.getHttpServer())
       .post('/api/attendance/sheets')
       .set('Authorization', `Bearer ${foremanToken}`)
@@ -50,12 +50,13 @@ describe('Attendance sheet lifecycle (e2e)', () => {
       .set('Authorization', `Bearer ${foremanToken}`)
       .expect(200);
 
-    expect(validation.body.isComplete).toBe(true);
-    expect(validation.body.presentCount).toBe(sheet.body.totalCount);
+    expect(validation.body.isComplete).toBe(false);
+    expect(validation.body.presentCount).toBe(0);
+    expect(validation.body.unmarked).toBe(sheet.body.totalCount);
   });
 
   it('marking a student absent without a reason is rejected', async () => {
-    const date = isoDate(-2);
+    const date = isoDate(30 + 2);
     const sheet = await request(app.getHttpServer())
       .post('/api/attendance/sheets')
       .set('Authorization', `Bearer ${foremanToken}`)
@@ -76,7 +77,7 @@ describe('Attendance sheet lifecycle (e2e)', () => {
   });
 
   it('cannot submit a sheet that has an absence without a reason, but can after fixing it', async () => {
-    const date = isoDate(-3);
+    const date = isoDate(30 + 3);
     const sheet = await request(app.getHttpServer())
       .post('/api/attendance/sheets')
       .set('Authorization', `Bearer ${foremanToken}`)
@@ -99,7 +100,7 @@ describe('Attendance sheet lifecycle (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/attendance/records/bulk')
       .set('Authorization', `Bearer ${foremanToken}`)
-      .send({ sheetId: sheet.body.id, updates: [{ studentId, isPresent: false, reasonId }] })
+      .send({ sheetId: sheet.body.id, updates: detail.body.records.map((r:any)=>({studentId:r.studentId,isPresent:r.studentId!==studentId,reasonId:r.studentId===studentId?reasonId:undefined,note:'Тест'})) })
       .expect(201);
 
     const submitted = await request(app.getHttpServer())
@@ -114,7 +115,7 @@ describe('Attendance sheet lifecycle (e2e)', () => {
     const groups = await request(app.getHttpServer()).get('/api/groups').set('Authorization', `Bearer ${admin}`);
     const otherGroup = groups.body.data.find((g: any) => g.id !== groupId);
 
-    const date = isoDate(-4);
+    const date = isoDate(30 + 4);
     await request(app.getHttpServer())
       .post('/api/attendance/sheets')
       .set('Authorization', `Bearer ${foremanToken}`)

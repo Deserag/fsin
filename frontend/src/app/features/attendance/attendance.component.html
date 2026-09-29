@@ -1,167 +1,31 @@
 <div class="attendance-page page-fade-in">
-  <div class="toolbar card">
-    <div class="form-field">
-      <label>Группа</label>
-      <select [ngModel]="selectedGroupId()" (ngModelChange)="selectedGroupId.set($event); onContextChange()">
-        @for (g of groups(); track g.id) {
-          <option [value]="g.id">{{ g.name }} ({{ g.currentCourse }} курс)</option>
-        }
-      </select>
-    </div>
-
-    <div class="form-field">
-      <label>Период</label>
-      <select [ngModel]="selectedPeriodId()" (ngModelChange)="selectedPeriodId.set($event); onContextChange()">
-        @for (p of periods(); track p.id) {
-          <option [value]="p.id">{{ p.name }}</option>
-        }
-      </select>
-    </div>
-
-    <div class="form-field">
-      <label>Дата</label>
-      <input type="date" [ngModel]="date()" (ngModelChange)="date.set($event); onContextChange()" />
-    </div>
-
-    @if (sheet(); as s) {
-      <div class="toolbar-status">
-        <span class="badge badge-neutral">{{ statusLabel(s.status) }}</span>
-      </div>
-    }
-  </div>
-
-  @if (error()) {
-    <div class="alert alert-danger">{{ error() }}</div>
-  }
-
-  @if (loading()) {
-    <div class="card skeleton" style="height: 320px"></div>
-  } @else if (sheet()) {
-    @if (validation(); as v) {
-      <div class="validation-bar card" [class.valid]="v.isValid">
-        @if (v.isValid) {
-          <span>✓ Все {{ v.totalStudents }} студентов отмечены</span>
-        } @else {
-          <span>
-            Отмечено {{ v.totalMarked }} из {{ v.totalStudents }}.
-            @if (v.unmarked > 0) { Не указана явка для {{ v.unmarked }}. }
-            @if (v.absentWithoutReasonCount > 0) { Без причины: {{ v.absentWithoutReasonCount }}. }
-          </span>
-        }
-      </div>
-    }
-
-    <div class="actions-bar card">
-      <input
-        type="text"
-        class="search-input"
-        placeholder="Поиск по имени…"
-        [ngModel]="search()"
-        (ngModelChange)="search.set($event)"
-      />
-
-      <div class="bulk-actions">
-        <button type="button" class="btn btn-secondary" (click)="toggleSelectAll()">
-          {{ allSelected() ? 'Снять выделение' : 'Выбрать всех' }}
-        </button>
-
-        <span class="selected-count">Выбрано: {{ selectedCount() }}</span>
-
-        <button type="button" class="btn btn-secondary" [disabled]="selectedCount() === 0 || isClosed" (click)="bulkMarkPresent()">
-          Отметить присутствующими
-        </button>
-
-        <select
-          class="bulk-reason-select"
-          [disabled]="selectedCount() === 0 || isClosed"
-          (change)="bulkMarkAbsent($any($event.target).value); $any($event.target).value = ''"
-        >
-          <option value="" disabled selected>Отметить отсутствующими…</option>
-          @for (r of reasons(); track r.id) {
-            <option [value]="r.id">{{ r.name }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="save-actions">
-        <button type="button" class="btn btn-primary" [disabled]="saving() || isClosed" (click)="save()">
-          {{ saving() ? 'Сохранение…' : 'Сохранить' }}
-        </button>
-        <button
-          type="button"
-          class="btn btn-secondary"
-          [disabled]="saving() || isClosed || !validation()?.isValid"
-          (click)="submit()"
-        >
-          Отправить на проверку
-        </button>
-      </div>
-    </div>
-
-    <div class="card students-table">
-      <table>
-        <thead>
-          <tr>
-            <th class="select-col"></th>
-            <th>Студент</th>
-            <th>Явка</th>
-            <th>Причина</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of filteredRows(); track row.studentId) {
-            <tr [class.absent]="!row.isPresent">
-              <td class="select-col">
-                <input type="checkbox" [checked]="row.selected" (change)="toggleRowSelected(row.studentId)" />
-              </td>
-              <td>{{ row.name }}</td>
-              <td>
-                <div class="presence-toggle">
-                  <button
-                    type="button"
-                    class="btn btn-ghost"
-                    [class.active-present]="row.isPresent"
-                    [disabled]="isClosed"
-                    (click)="markPresent(row.studentId)"
-                  >
-                    Присутствует
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-ghost"
-                    [class.active-absent]="!row.isPresent"
-                    [disabled]="isClosed"
-                    (click)="markAbsent(row.studentId, row.reasonId || defaultReasonId())"
-                  >
-                    Отсутствует
-                  </button>
-                </div>
-              </td>
-              <td>
-                @if (!row.isPresent) {
-                  <select
-                    [ngModel]="row.reasonId"
-                    [disabled]="isClosed"
-                    (ngModelChange)="markAbsent(row.studentId, $event)"
-                  >
-                    @for (r of reasons(); track r.id) {
-                      <option [value]="r.id">{{ r.name }}</option>
-                    }
-                  </select>
-                } @else {
-                  <span class="text-muted">—</span>
-                }
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-
-      @if (filteredRows().length === 0) {
-        <div class="empty-state">
-          <p>Студенты не найдены</p>
-        </div>
-      }
-    </div>
-  }
+ <div class="toolbar card">
+ <div class="form-field"><label>Учебный год</label><select aria-label="Учебный год" [disabled]="dirty()||loading()||saving()" [ngModel]="academicYearId()" (ngModelChange)="academicYearId.set($event);load()">@for(y of years();track y.id){<option [value]="y.id">{{y.name}}</option>}</select></div>
+ <div class="form-field"><label>Курс</label><input aria-label="Курс" type="number" min="1" max="10" [disabled]="dirty()||loading()||saving()" [ngModel]="course()" (ngModelChange)="course.set($event);load()"></div>
+ <div class="form-field"><label>Дата</label><input aria-label="Дата" type="date" [disabled]="dirty()||loading()||saving()" [ngModel]="date()" (ngModelChange)="date.set($event);load()"></div>
+ <div class="form-field"><label>Период</label><select aria-label="Период" [disabled]="dirty()||loading()||saving()" [ngModel]="periodId()" (ngModelChange)="periodId.set($event);load()">@for(p of periods();track p.id){<option [value]="p.id">{{p.name}}</option>}</select></div>
+ @if(auth.hasPermission('ATTENDANCE_WRITE')){<button class="btn btn-primary" [disabled]="loading()||saving()||dirty()" (click)="load(true)">Открыть / создать табель курса</button>}
+ </div>
+ @if(error()){<div class="alert alert-danger">{{error()}}</div>}
+ @if(loading()){<p>Загрузка…</p>}@else{
+ <div class="validation-bar card" [class.valid]="valid()">Всего: {{totals().total}} · Присутствуют: {{totals().present}} · Отсутствуют: {{totals().absent}} · Не заполнено: {{totals().unmarked.length}}
+ @if(totals().unmarked.length){<details><summary>Кого необходимо отметить</summary>@for(r of totals().unmarked;track r.studentId){<div>{{r.groupName}} — {{r.name}}</div>}</details>}
+ </div>
+ @if(sheets().length){<section class="card roster-overview" aria-label="Строевая записка">
+   <div class="roster-heading"><div><h3>Строевая записка · {{course()}} курс</h3><span>{{date()|date:'dd.MM.yyyy'}} · {{selectedPeriodLabel()}}</span></div></div>
+   <div class="roster-metrics"><div><span>По списку</span><strong>{{rosterSummary().total}}</strong></div><div><span>Из них девушки</span><strong>{{rosterSummary().female}}</strong></div><div><span>В институте</span><strong>{{rosterSummary().inside}}</strong></div><div><span>Вне института</span><strong>{{rosterSummary().outside}}</strong></div></div>
+   @if(rosterSummary().genderUnknown){<p class="roster-note">Пол не указан у {{rosterSummary().genderUnknown}} студентов; они не включены в число девушек.</p>}
+   <div class="roster-categories"><div><h4>Из них в институте</h4><div class="category-grid">@for(item of rosterColumns.slice(0,4);track item.code){<div><span>{{item.label}}</span><strong>{{rosterSummary().byCode[item.code]??0}}</strong></div>}</div></div><div><h4>Из них вне института</h4><div class="category-grid">@for(item of rosterColumns.slice(4);track item.code){<div><span>{{item.label}}</span><strong>{{rosterSummary().byCode[item.code]??0}}</strong></div>}</div></div></div>
+ </section>}
+ <div class="actions-bar card"><input placeholder="Поиск по ФИО" [ngModel]="search()" (ngModelChange)="search.set($event)"><div class="bulk-actions"><button class="btn btn-secondary" (click)="selectAll()">{{allSelected()?'Снять всех':'Выбрать всех'}}</button><span>Выбрано: {{selectedCount()}}</span><button class="btn btn-secondary" [disabled]="!selectedCount()" (click)="bulk(true)">В строю</button><select [disabled]="!selectedCount()" (change)="bulk(false,$any($event.target).value);$any($event.target).value='' "><option value="">Причина отсутствия…</option>@for(r of reasonOptions(false);track r.id){<option [value]="r.id">{{r.name}}</option>}</select></div><div class="save-actions"><button class="btn btn-primary" [disabled]="saving()||!dirty()" (click)="save()">Сохранить</button><button class="btn btn-secondary" [disabled]="saving()||dirty()||!valid()||!canSubmit()" (click)="submit()">Отправить на проверку</button></div></div>
+ @for(sheet of sheets();track sheet.id){
+ <div class="card students-table"><h3>Группа {{sheet.group?.name}} · {{sheet.date|date:'dd.MM.yyyy'}} · {{sheet.period?.name}} · {{statusLabel(sheet.status)}}</h3>
+ @if(sheet.returnComment){<div class="alert alert-danger">Возвращён: {{sheet.returnComment}}</div>}
+ <table><thead><tr><th>Выбор</th><th>Студент</th><th>В институте / вне института</th><th>Положение / причина</th></tr></thead><tbody>
+ @for(row of visibleRows(sheet.id);track row.studentId){<tr [class.selected]="row.selected" [class.absent]="row.isPresent===false" (click)="rowClick($event,row)"><td class="select-col"><input type="checkbox" [attr.aria-label]="'Выбрать '+row.name" [checked]="row.selected" (change)="select(row)"></td><td>{{row.name}}</td><td><div class="presence-toggle"><button class="btn btn-ghost" [class.active-present]="row.isPresent===true" [disabled]="!editable(sheet.id)" (click)="mark(row,true)">Присутствует</button><button class="btn btn-ghost" [class.active-absent]="row.isPresent===false" [disabled]="!editable(sheet.id)" (click)="mark(row,false)">Отсутствует</button>@if(row.isPresent===null){<span>Не отмечен</span>}</div></td><td>
+ @if(row.isPresent!==null){<select [disabled]="!editable(sheet.id)" [ngModel]="row.reasonId" (ngModelChange)="mark(row,row.isPresent,$event)"><option [ngValue]="null">{{row.isPresent?'Не уточнено':'Выберите причину'}}</option>@for(r of reasonOptions(row.isPresent);track r.id){<option [value]="r.id">{{r.name}}</option>}</select>@if(row.isPresent===false){<input placeholder="Комментарий" [disabled]="!editable(sheet.id)" [ngModel]="row.note" (ngModelChange)="mark(row,false,undefined,$event)">}}
+ </td></tr>}
+ </tbody></table></div>}
+ @if(!sheets().length){<div class="empty-state card">Табели не созданы. Выберите курс и нажмите «Открыть / создать табель курса».</div>}
+ }
 </div>

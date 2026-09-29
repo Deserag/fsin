@@ -21,7 +21,7 @@
         <thead>
           <tr>
             <th>ФИО</th>
-            <th>Email</th>
+            <th>Логин</th>
             <th>Роль</th>
             <th>Доступ</th>
             <th>Статус</th>
@@ -32,14 +32,14 @@
           @for (u of users(); track u.id) {
             <tr class="row-fade-in">
               <td>{{ u.lastName }} {{ u.firstName }} {{ u.middleName }}</td>
-              <td>{{ u.email }}</td>
+              <td>{{ u.login }}</td>
               <td>{{ roleLabel(u) }}</td>
               <td>
                 @if (u.groupScopes.length) {
                   <span class="badge badge-neutral">{{ u.groupScopes.length }} гр.</span>
                 }
-                @if (u.directionScopes.length) {
-                  <span class="badge badge-neutral">{{ u.directionScopes.length }} напр.</span>
+                @if (u.programScopes.length) {
+                  <span class="badge badge-neutral">{{ u.programScopes.length }} программ</span>
                 }
               </td>
               <td>
@@ -90,11 +90,11 @@
           <input type="text" [ngModel]="form().phone" (ngModelChange)="updateField('phone', $event)" />
         </div>
 
-        @if (!form().id) {
           <div class="form-field">
-            <label>Email *</label>
-            <input type="email" [ngModel]="form().email" (ngModelChange)="updateField('email', $event)" />
+            <label>Логин *</label>
+            <input type="text" [ngModel]="form().login" (ngModelChange)="updateField('login', $event)" />
           </div>
+        @if (!form().id) {
           <div class="form-field">
             <label>Пароль *</label>
             <input type="password" [ngModel]="form().password" (ngModelChange)="updateField('password', $event)" />
@@ -115,27 +115,31 @@
       </div>
 
       <div class="form-field">
-        <label>Доступ к группам (для старшин)</label>
-        <div class="checkbox-list scrollable">
-          @for (g of groups(); track g.id) {
+        <label>Доступ к группам (для сотрудников УСП)</label>
+        <input class="scope-search" type="search" placeholder="Найти группу" aria-label="Найти группу" [ngModel]="groupSearch()" (ngModelChange)="groupSearch.set($event)">
+        <div class="scope-list">
+          @for (g of visibleGroups(); track g.id) {
             <label class="checkbox-item">
               <input type="checkbox" [checked]="form().groupScopeIds.includes(g.id)" (change)="toggleGroupScope(g.id)" />
               {{ g.name }}
             </label>
           }
         </div>
+        <small>Выбрано: {{ form().groupScopeIds.length }}</small>
       </div>
 
       <div class="form-field">
-        <label>Доступ к направлениям (для руководителей)</label>
-        <div class="checkbox-list">
-          @for (d of directions(); track d.id) {
+        <label>Доступ к образовательным программам</label>
+        <input class="scope-search" type="search" placeholder="Найти программу" aria-label="Найти образовательную программу" [ngModel]="programSearch()" (ngModelChange)="programSearch.set($event)">
+        <div class="scope-list">
+          @for (p of visiblePrograms(); track p.id) {
             <label class="checkbox-item">
-              <input type="checkbox" [checked]="form().directionScopeIds.includes(d.id)" (change)="toggleDirectionScope(d.id)" />
-              {{ d.name }}
+              <input type="checkbox" [checked]="form().programScopeIds.includes(p.id)" (change)="toggleProgramScope(p.id)" />
+              {{ p.code }} — {{ p.name }}
             </label>
           }
         </div>
+        <small>Выбрано: {{ form().programScopeIds.length }}</small>
       </div>
 
       <div class="modal-actions">

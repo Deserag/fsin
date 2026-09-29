@@ -76,8 +76,9 @@ export interface SummaryReport {
 export class ReportsService {
   constructor(private readonly http: HttpClient) {}
 
-  dashboard(): Observable<DashboardData> {
-    return this.http.get<DashboardData>(`${environment.apiUrl}/reports/dashboard`);
+  attendance(params: Record<string,string>): Observable<any> { return this.http.get(`${environment.apiUrl}/reports/attendance`, {params}); }
+  dashboard(params: Record<string,string> = {}): Observable<any> {
+    return this.http.get(`${environment.apiUrl}/reports/dashboard`, {params});
   }
 
   groupReport(groupId: string, params: Record<string, string> = {}): Observable<GroupReport> {

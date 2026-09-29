@@ -10,19 +10,23 @@ import { Roles } from '../auth/decorators/roles.decorator.js';
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
+  @Post('course') openCourse(@Body() dto: any, @CurrentUser() user: any) { return this.attendanceService.openCourse(dto, user); }
+  @Get('course') course(@Query() dto: any, @CurrentUser() user: any) { return this.attendanceService.courseSheets(dto, user); }
+  @Patch('course') courseAction(@Body() dto: any, @CurrentUser() user: any) { return this.attendanceService.courseAction(dto, user); }
+  @Patch('sheets/:id/return') returnSheet(@Param('id') id: string, @Body('comment') comment: string, @CurrentUser() user: any) { return this.attendanceService.returnSheet(id, user, comment); }
   @Get('sheets')
   findSheets(@Query() query: any, @CurrentUser() user: any) {
     return this.attendanceService.findSheets(user.organizationId, user, query);
   }
 
   @Get('sheets/:id')
-  findOneSheet(@Param('id') id: string) {
-    return this.attendanceService.findOneSheet(id);
+  findOneSheet(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.attendanceService.findOneSheet(id, user);
   }
 
   @Get('sheets/:id/validation')
-  getSheetValidation(@Param('id') id: string) {
-    return this.attendanceService.getSheetValidation(id);
+  getSheetValidation(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.attendanceService.getSheetValidation(id, user);
   }
 
   @Post('sheets')
@@ -37,14 +41,12 @@ export class AttendanceController {
   }
 
   @Patch('sheets/:id/review')
-  @Roles('admin', 'manager')
   @HttpCode(HttpStatus.OK)
   reviewSheet(@Param('id') id: string, @CurrentUser() user: any) {
     return this.attendanceService.reviewSheet(id, user);
   }
 
   @Patch('sheets/:id/close')
-  @Roles('admin')
   @HttpCode(HttpStatus.OK)
   closeSheet(@Param('id') id: string, @CurrentUser() user: any) {
     return this.attendanceService.closeSheet(id, user);

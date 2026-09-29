@@ -51,20 +51,22 @@ export class ImportsService {
     return { jobId: job.id, headers, totalRows: rows.length, previewData: rows.slice(0, 10) };
   }
 
-  async setColumnMapping(jobId: string, mapping: Record<string, string>) {
+  async setColumnMapping(jobId: string, mapping: Record<string, string>, organizationId: string) {
     await this.prisma.importJob.update({
-      where: { id: jobId },
+      where: { id: jobId, organizationId },
       data: { status: 'VALIDATING', columnMapping: mapping },
     });
     return { jobId, mapping };
   }
 
   async validate(jobId: string, organizationId: string) {
-    const job = await this.prisma.importJob.findUnique({ where: { id: jobId } });
+    const job = await this.prisma.importJob.findFirst({ where: { id: jobId, organizationId } });
     if (!job) throw new NotFoundException('Задание импорта не найдено');
 
     const rows = (job.rawData as any[]) ?? [];
+    if (!['PARSING','VALIDATING','PREVIEW'].includes(job.status)) throw new BadRequestException('Импорт уже выполняется или завершён');
     const mapping = job.columnMapping as Record<string, string>;
+    if (!mapping) throw new BadRequestException('Сначала сопоставьте колонки');
     const errors: Array<{ row: number; field: string; message: string; value: string }> = [];
     const valid: any[] = [];
 
@@ -111,9 +113,18 @@ export class ImportsService {
       if (!statusId) { errors.push({ row: rowNum, field: 'statusCode', message: `Статус "${mapped.statusCode}" не найден`, value: mapped.statusCode }); rowValid = false; }
       else mapped.statusId = statusId;
 
+      if (mapped.birthDate) {
+        const raw = String(mapped.birthDate);
+        const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(raw);
+        const value = typeof mapped.birthDate === 'number' ? new Date(Date.UTC(1899,11,30) + mapped.birthDate * 86400000) : new Date(match ? `${match[3]}-${match[2]}-${match[1]}` : raw);
+        if (!Number.isFinite(+value)) { errors.push({row:rowNum,field:'birthDate',message:'Некорректная дата рождения',value:raw});rowValid=false; } else mapped.birthDate=value.toISOString();
+      }
+      if (mapped.currentCourse && (!Number.isInteger(Number(mapped.currentCourse)) || Number(mapped.currentCourse)<1 || Number(mapped.currentCourse)>10)) { errors.push({row:rowNum,field:'currentCourse',message:'Курс от 1 до 10',value:String(mapped.currentCourse)});rowValid=false; }
+      if (mapped.enrollmentYear && !/^(19|20)\d{2}$/.test(String(mapped.enrollmentYear))) { errors.push({row:rowNum,field:'enrollmentYear',message:'Неверный год поступления',value:String(mapped.enrollmentYear)});rowValid=false; }
       if (rowValid) valid.push(mapped);
     });
 
+    await this.prisma.importError.deleteMany({ where: { jobId } });
     // Save errors to DB
     if (errors.length > 0) {
       await this.prisma.importError.createMany({
@@ -131,7 +142,7 @@ export class ImportsService {
 
   async confirm(jobId: string, organizationId: string, userId: string) {
     const job = await this.prisma.importJob.findUnique({
-      where: { id: jobId },
+      where: { id: jobId, organizationId },
       include: { errors: true },
     });
     if (!job) throw new NotFoundException('Задание импорта не найдено');
@@ -142,10 +153,12 @@ export class ImportsService {
       throw new BadRequestException('Нет валидных строк для импорта');
     }
 
-    await this.prisma.importJob.update({ where: { id: jobId }, data: { status: 'IMPORTING', confirmedAt: new Date() } });
+
 
     let importedRows = 0;
     await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.importJob.updateMany({ where: { id: jobId, organizationId, status: 'PREVIEW' }, data: { status: 'IMPORTING', confirmedAt: new Date() } });
+      if (claimed.count !== 1) throw new BadRequestException('Импорт уже выполняется или выполнен');
       for (const row of validRows) {
         const enrollmentDate = row.enrollmentYear ? new Date(`${row.enrollmentYear}-09-01`) : new Date();
         const student = await tx.student.create({
@@ -160,18 +173,21 @@ export class ImportsService {
             programId: row.programId ?? null,
             statusId: row.statusId,
             currentGroupId: row.groupId ?? null,
+            statusHistory: { create: { statusId: row.statusId, changeDate: enrollmentDate, changedBy: userId } },
+            courseHistory: { create: { toCourse: row.currentCourse ? Number(row.currentCourse) : 1, transitionDate: enrollmentDate, changedBy: userId } },
           },
         });
 
         if (row.groupId) {
           await tx.studentGroupHistory.create({
-            data: { studentId: student.id, groupId: row.groupId, joinDate: new Date() },
+            data: { studentId: student.id, groupId: row.groupId, joinDate: enrollmentDate },
           });
         }
 
         importedRows += 1;
       }
 
+      await tx.importJob.update({ where: { id: jobId }, data: { status: 'COMPLETED', completedAt: new Date(), importedRows } });
       await tx.auditLog.create({
         data: {
           organizationId,
@@ -183,17 +199,14 @@ export class ImportsService {
       });
     });
 
-    await this.prisma.importJob.update({
-      where: { id: jobId },
-      data: { status: 'COMPLETED', completedAt: new Date(), importedRows },
-    });
+
 
     return { jobId, importedRows, errorRows: job.errorRows };
   }
 
-  async getJob(jobId: string) {
+  async getJob(jobId: string, organizationId: string) {
     return this.prisma.importJob.findUnique({
-      where: { id: jobId },
+      where: { id: jobId, organizationId },
       include: { errors: { take: 100 } },
     });
   }
@@ -209,7 +222,6 @@ export class ImportsService {
       { header: 'Дата рождения', key: 'birthDate', width: 15 },
       { header: 'Группа', key: 'groupName', width: 20 },
       { header: 'Курс', key: 'currentCourse', width: 10 },
-      { header: 'Направление (код)', key: 'directionCode', width: 20 },
       { header: 'Программа (код)', key: 'programCode', width: 20 },
       { header: 'Год поступления', key: 'enrollmentYear', width: 15 },
       { header: 'Статус (код)', key: 'statusCode', width: 15 },
@@ -221,7 +233,7 @@ export class ImportsService {
     ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
 
     // Add example row
-    ws.addRow(['Иванов', 'Иван', 'Иванович', '01.01.1995', '204', '2', 'LAW', 'LAW_BACHELOR', '2023', 'STUDYING']);
+    ws.addRow(['Иванов', 'Иван', 'Иванович', '01.01.1995', '101', '1', '10.05.02', '2023', 'STUDYING']);
 
     return workbook.xlsx.writeBuffer();
   }

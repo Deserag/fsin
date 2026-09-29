@@ -22,7 +22,7 @@ export class LoginComponent {
     private readonly router: Router,
   ) {
     this.form = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
+      login: ['', [Validators.required, Validators.required]],
       password: ['', [Validators.required]],
     });
   }
@@ -32,17 +32,17 @@ export class LoginComponent {
       this.form.markAllAsTouched();
       return;
     }
-    const { email, password } = this.form.getRawValue();
+    const { login, password } = this.form.getRawValue();
     this.loading.set(true);
     this.error.set(null);
-    this.auth.login(email!, password!).subscribe({
+    this.auth.login(login!, password!).subscribe({
       next: () => {
         this.loading.set(false);
         this.router.navigate(['/']);
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(err.error?.message ?? 'Не удалось войти. Проверьте почту и пароль.');
+        this.error.set(err.error?.message ?? 'Не удалось войти. Проверьте логин и пароль.');
       },
     });
   }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, UploadedFile, UseInterceptors, Res } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Body, Param, UseGuards, UploadedFile, UseInterceptors, Res } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ImportsService } from './imports.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
@@ -25,13 +25,13 @@ export class ImportsController {
   @Post('students/parse')
   @UseInterceptors(FileInterceptor('file'))
   parseExcel(@UploadedFile() file: Express.Multer.File, @CurrentUser('organizationId') o: string, @CurrentUser('id') u: string) {
-    if (!file) throw new Error('Файл не загружен');
+    if (!file) throw new BadRequestException('Файл не загружен');
     return this.service.parseExcel(file.buffer, o, u);
   }
 
   @Post('students/mapping')
-  setMapping(@Body('jobId') jobId: string, @Body('mapping') mapping: Record<string, string>) {
-    return this.service.setColumnMapping(jobId, mapping);
+  setMapping(@Body('jobId') jobId: string, @Body('mapping') mapping: Record<string, string>, @CurrentUser('organizationId') o: string) {
+    return this.service.setColumnMapping(jobId, mapping, o);
   }
 
   @Post('students/validate')
@@ -45,5 +45,5 @@ export class ImportsController {
   }
 
   @Get(':id')
-  getJob(@Param('id') id: string) { return this.service.getJob(id); }
+  getJob(@Param('id') id: string, @CurrentUser('organizationId') o: string) { return this.service.getJob(id, o); }
 }

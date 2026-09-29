@@ -12,10 +12,12 @@ import { ToastService } from '../../shared/services/toast.service';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 
 interface StudentFormState {
+  effectiveDate: string;
   id: string | null;
   lastName: string;
   firstName: string;
   middleName: string;
+  gender: string;
   birthDate: string;
   enrollmentDate: string;
   currentCourse: number;
@@ -26,10 +28,12 @@ interface StudentFormState {
 
 function emptyForm(): StudentFormState {
   return {
+    effectiveDate: new Date().toISOString().slice(0,10),
     id: null,
     lastName: '',
     firstName: '',
     middleName: '',
+    gender: '',
     birthDate: '',
     enrollmentDate: '',
     currentCourse: 1,
@@ -107,10 +111,12 @@ export class StudentsComponent implements OnInit {
 
   openEdit(s: Student): void {
     this.form.set({
+      effectiveDate: new Date().toISOString().slice(0,10),
       id: s.id,
       lastName: s.lastName,
       firstName: s.firstName,
       middleName: s.middleName ?? '',
+      gender: s.gender ?? '',
       birthDate: s.birthDate?.slice(0, 10) ?? '',
       enrollmentDate: s.enrollmentDate?.slice(0, 10) ?? '',
       currentCourse: s.currentCourse,
@@ -137,9 +143,11 @@ export class StudentsComponent implements OnInit {
     }
 
     const payload = {
+      ...(f.id && {effectiveDate: f.effectiveDate}),
       lastName: f.lastName,
       firstName: f.firstName,
       middleName: f.middleName || undefined,
+      gender: f.gender || undefined,
       birthDate: f.birthDate || undefined,
       enrollmentDate: f.enrollmentDate || undefined,
       currentCourse: Number(f.currentCourse),

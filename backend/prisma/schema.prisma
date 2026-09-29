@@ -48,7 +48,8 @@ model Organization {
 model User {
   id             String    @id @default(cuid())
   organizationId String
-  email          String    @unique
+  login          String    @unique
+  email          String?   @unique
   passwordHash   String
   firstName      String
   lastName       String
@@ -66,6 +67,7 @@ model User {
   roles          UserRole[]
   groupScopes    UserGroupScope[]
   directionScopes UserDirectionScope[]
+  programScopes  UserProgramScope[]
   auditLogs      AuditLog[]
   importJobs     ImportJob[]
   foremanGroups  GroupForeman[]
@@ -167,6 +169,19 @@ model UserDirectionScope {
   @@map("user_direction_scopes")
 }
 
+model UserProgramScope {
+  id        String   @id @default(cuid())
+  userId    String
+  programId String
+  createdAt DateTime @default(now())
+
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program EducationalProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, programId])
+  @@map("user_program_scopes")
+}
+
 // ============================================================
 // ACADEMIC STRUCTURE
 // ============================================================
@@ -193,21 +208,25 @@ model Direction {
 model EducationalProgram {
   id             String   @id @default(cuid())
   organizationId String
-  directionId    String
+  directionId    String?
   code           String
   name           String
   shortName      String?
-  durationYears  Int      // срок обучения в годах
-  maxCourse      Int      // максимальный курс (обычно = durationYears)
+  educationForm String?
+  specialization String?
+  sourceUrl String?
+  durationYears  Int?     // срок обучения в годах
+  maxCourse      Int?     // максимальный курс (обычно = durationYears)
   description    String?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id])
-  direction    Direction    @relation(fields: [directionId], references: [id])
+  direction    Direction?   @relation(fields: [directionId], references: [id])
   groups       Group[]
   students     Student[]
+  userScopes   UserProgramScope[]
 
   @@unique([organizationId, code])
   @@map("educational_programs")
@@ -220,6 +239,7 @@ model AcademicYear {
   startDate      DateTime
   endDate        DateTime
   isCurrent      Boolean  @default(false)
+  isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -237,6 +257,7 @@ model StudentStatus {
   code           String
   name           String
   description    String?
+  countsInAttendance Boolean @default(true)
   isTerminal     Boolean  @default(false) // отчислен, завершил обучение
   isActive       Boolean  @default(true)
   sortOrder      Int      @default(0)
@@ -260,6 +281,7 @@ model Student {
   lastName         String
   firstName        String
   middleName       String?
+  gender           String?
   birthDate        DateTime?
   enrollmentDate   DateTime?
   graduationDate   DateTime?
@@ -318,6 +340,7 @@ model StudentGroupHistory {
   group   Group   @relation(fields: [groupId], references: [id])
 
   @@index([studentId])
+  @@index([groupId, joinDate, leaveDate])
   @@map("student_group_histories")
 }
 
@@ -415,6 +438,7 @@ model AttendanceReason {
   organizationId String
   code           String
   name           String
+  category       String   @default("OUTSIDE")
   description    String?
   requiresNote   Boolean  @default(false)
   isActive       Boolean  @default(true)
@@ -477,6 +501,11 @@ model AttendanceSheet {
   periodId     String
   date         DateTime
   status       AttendanceSheetStatus @default(DRAFT)
+  courseSnapshot Int?
+  programSnapshotId String?
+  academicYearSnapshotId String?
+  returnComment String?
+  createdBy String?
   totalCount   Int                 @default(0)
   presentCount Int                 @default(0)
   absentCount  Int                 @default(0)
@@ -495,6 +524,8 @@ model AttendanceSheet {
   records AttendanceRecord[]
 
   @@unique([groupId, periodId, date])
+  @@index([date, status])
+  @@index([academicYearSnapshotId, courseSnapshot, date])
   @@index([groupId, date])
   @@index([status])
   @@map("attendance_sheets")
@@ -512,7 +543,10 @@ model AttendanceRecord {
   id          String   @id @default(cuid())
   sheetId     String
   studentId   String
-  isPresent   Boolean
+  courseSnapshot Int?
+  statusSnapshotId String?
+  programSnapshotId String?
+  isPresent   Boolean?
   reasonId    String?
   note        String?
   markedAt    DateTime @default(now())

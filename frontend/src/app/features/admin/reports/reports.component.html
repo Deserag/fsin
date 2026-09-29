@@ -1,79 +1,24 @@
-<div class="reports-page page-fade-in">
-  <div class="page-header">
-    <h2>Отчёты</h2>
-    <button type="button" class="btn btn-secondary" (click)="exportStudents()">Экспорт студентов (.xlsx)</button>
-  </div>
-
-  <div class="tabs">
-    <button type="button" class="tab" [class.active]="tab() === 'summary'" (click)="setTab('summary')">Сводный отчёт</button>
-    <button type="button" class="tab" [class.active]="tab() === 'group'" (click)="setTab('group')">По группе</button>
-  </div>
-
-  @if (loading()) {
-    <div class="card skeleton" style="height: 320px"></div>
-  } @else {
-    @if (tab() === 'summary' && summary(); as s) {
-      <div class="summary-totals card">
-        <div class="total-item"><span class="value">{{ s.totals.groupCount }}</span><span class="label">Групп</span></div>
-        <div class="total-item"><span class="value">{{ s.totals.totalRecords }}</span><span class="label">Записей явки</span></div>
-        <div class="total-item"><span class="value">{{ s.totals.avgAttendanceRate ?? '—' }}%</span><span class="label">Средняя посещаемость</span></div>
-      </div>
-
-      <div class="card summary-table">
-        <table>
-          <thead>
-            <tr><th>Группа</th><th>Направление</th><th>Студентов</th><th>Табелей</th><th>Посещаемость</th></tr>
-          </thead>
-          <tbody>
-            @for (g of s.groups; track g.id) {
-              <tr class="row-fade-in">
-                <td>{{ g.name }}</td>
-                <td>{{ g.direction?.name ?? '—' }}</td>
-                <td>{{ g.studentCount }}</td>
-                <td>{{ g.totalSheets }}</td>
-                <td>
-                  @if (g.attendanceRate !== null) {
-                    <span class="badge" [class.badge-success]="g.attendanceRate >= 80" [class.badge-warning]="g.attendanceRate < 80">
-                      {{ g.attendanceRate }}%
-                    </span>
-                  } @else { — }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-
-    @if (tab() === 'group') {
-      <div class="group-filter form-field">
-        <label>Группа</label>
-        <select [ngModel]="selectedGroupId()" (ngModelChange)="onGroupChange($event)">
-          @for (g of groups(); track g.id) {
-            <option [value]="g.id">{{ g.name }}</option>
-          }
-        </select>
-      </div>
-
-      @if (groupReport(); as gr) {
-        <div class="summary-totals card">
-          <div class="total-item"><span class="value">{{ gr.summary.totalSheets }}</span><span class="label">Табелей</span></div>
-          <div class="total-item"><span class="value">{{ gr.summary.presentRecords }}</span><span class="label">Присутствий</span></div>
-          <div class="total-item"><span class="value">{{ gr.summary.absentRecords }}</span><span class="label">Отсутствий</span></div>
-          <div class="total-item"><span class="value">{{ gr.summary.attendanceRate }}%</span><span class="label">Посещаемость</span></div>
-        </div>
-
-        @if (reasonEntries(gr.summary.reasonBreakdown).length > 0) {
-          <div class="card reasons-card">
-            <h3>Причины отсутствия</h3>
-            <div class="reasons-list">
-              @for (entry of reasonEntries(gr.summary.reasonBreakdown); track entry[0]) {
-                <span class="badge badge-neutral">{{ entry[0] }}: {{ entry[1] }}</span>
-              }
-            </div>
-          </div>
-        }
-      }
-    }
-  }
+<div class="reports-page page-fade-in"><header class="page-heading"><p class="eyebrow">{{ dashboard ? 'Сводка' : 'Аналитика' }}</p><h1>{{dashboard?'Обзор':'Отчёты по посещаемости'}}</h1><p>{{dashboard?'Текущая ситуация с контингентом и табелями':'Показатели и детализация за выбранный период'}}</p></header>
+@if(!dashboard){
+<div class="card filters"><div class="quick">@for(p of [['today','Сегодня'],['week','Неделя'],['month','Месяц'],['year','Учебный год']];track p[0]){<button class="btn btn-secondary" (click)="quick(p[0])">{{p[1]}}</button>}</div>
+<label>С<input type="date" [(ngModel)]="from"></label><label>По<input type="date" [(ngModel)]="to"></label><label>Курс<select [(ngModel)]="course"><option value="">Все</option>@for(c of [1,2,3,4,5,6,7,8,9,10];track c){<option [value]="c">{{c}}</option>}</select></label>
+<label>Учебный год<select [(ngModel)]="academicYearId"><option value="">Все</option>@for(y of years;track y.id){<option [value]="y.id">{{y.name}}</option>}</select></label>
+<label>Программы (можно несколько)<select multiple [(ngModel)]="program">@for(p of programs;track p.id){<option [value]="p.id">{{p.code}} {{p.shortName||p.name}}</option>}</select></label>
+<label>Группы (можно несколько)<select multiple [(ngModel)]="group">@for(g of groups;track g.id){<option [value]="g.id">{{g.name}}</option>}</select></label>
+<label>Причина<select [(ngModel)]="reasonId"><option value="">Все</option>@for(r of reasons;track r.id){<option [value]="r.id">{{r.name}}</option>}</select></label>
+<label>Статус студента на дату табеля<select [(ngModel)]="statusId"><option value="">Все</option>@for(s of statuses;track s.id){<option [value]="s.id">{{s.name}}</option>}</select></label>
+<button class="btn btn-primary" [disabled]="loading()" (click)="load()">Применить</button>@if(auth.hasPermission('REPORTS_EXPORT')){<button class="btn btn-secondary" (click)="exportAttendance()">Экспорт Excel</button>}
 </div>
+}
+@if(error()){<div class="alert alert-danger">{{error()}}</div>}@if(loading()){<p>Загрузка…</p>}
+@if(data();as d){
+<div class="metrics">@if(metrics();as m){<div class="card"><span>Обучающихся сейчас</span><strong>{{m.studentCount}}</strong></div><div class="card"><span>Отсутствий сегодня по периодам</span><strong>{{m.absentToday}}</strong></div><div class="card"><span>Табелей на проверке</span><strong>{{m.pendingCount}}</strong></div><div class="card"><span>Незаполненных табелей сегодня</span><strong>{{m.unfilledSheetsToday}}</strong></div>}
+<div class="card"><span>Посещаемость за период</span><strong>{{d.summary.attendanceRate}}%</strong></div><div class="card"><span>Присутствий / отсутствий</span><strong>{{d.summary.present}} / {{d.summary.absent}}</strong></div><div class="card"><span>Всего отметок / не заполнено</span><strong>{{d.summary.total}} / {{d.summary.unmarked}}</strong></div></div>
+@if(d.unknownHistoryCount){<p>Для {{d.unknownHistoryCount}} старых записей курс не удалось восстановить из истории. Они входят в общий отчет без фильтра курса.</p>}
+<div class="charts"><section class="card"><h3>Динамика посещаемости</h3><svg viewBox="0 0 700 200" role="img" aria-label="Посещаемость по датам"><text x="0" y="30">100%</text><text x="0" y="170">0%</text><line x1="30" y1="170" x2="675" y2="170" stroke="#c7d3d9"/><polyline [attr.points]="points()" fill="none" stroke="#267f83" stroke-width="3"/>@for(day of d.daily;track day.date;let i=$index){<circle [attr.cx]="30+i*640/((d.daily.length-1)||1)" [attr.cy]="170-day.attendanceRate*1.4" r="4" fill="#267f83"><title>{{day.date}}: {{day.attendanceRate}}%</title></circle>}</svg><div class="axis"><span>{{d.daily[0]?.date}}</span><span>{{d.daily[d.daily.length-1]?.date}}</span></div><details><summary>Данные графика</summary>@for(day of d.daily;track day.date){<div>{{day.date}} — {{day.attendanceRate}}%</div>}</details></section>
+<section class="card"><h3>Посещаемость по группам</h3>@for(g of d.groups;track g.id){<button class="chart-row" (click)="drillGroup(g.id)"><span>{{g.name}}</span><span class="bar-track"><span class="bar" [style.width.%]="g.attendanceRate"></span></span><b>{{g.attendanceRate}}%</b></button>}</section>
+<section class="card"><h3>Причины отсутствий</h3>@for(r of d.reasons;track r.id){<div class="chart-row"><span>{{r.name}}</span><span class="bar-track"><span class="bar absence" [style.width.%]="reasonWidth(r.count)"></span></span><b>{{r.count}}</b></div>}@if(!d.reasons.length){<p>Отсутствий нет</p>}</section></div>
+@if(!dashboard){<div class="card detail"><h3>Детализация: курс → группа → студент</h3><div class="quick">@for(c of d.courses;track c.course){<button class="btn btn-secondary" (click)="drillCourse(c.course)">{{c.course??'Неизвестный'}} курс · {{c.attendanceRate}}%</button>}</div><table><thead><tr><th>Группа</th><th>Всего</th><th>Присутствий</th><th>Отсутствий</th><th>Посещаемость</th></tr></thead><tbody>@for(g of d.groups;track g.id){<tr><td><button class="btn btn-ghost" (click)="drillGroup(g.id)">{{g.name}}</button></td><td>{{g.total}}</td><td>{{g.present}}</td><td>{{g.absent}}</td><td>{{g.attendanceRate}}%</td></tr>}</tbody></table>
+@if(d.students.length){<table><thead><tr><th>Студент</th><th>Курс на дату</th><th>Присутствий</th><th>Отсутствий</th><th>%</th></tr></thead><tbody>@for(s of d.students;track s.id){<tr><td>{{s.name}}</td><td>{{s.course??'Неизвестен'}}</td><td>{{s.present}}</td><td>{{s.absent}}</td><td>{{s.attendanceRate}}</td></tr>}</tbody></table>}
+@if(!d.summary.total){<p>Нет данных для выбранных фильтров</p>}</div>}
+}</div>

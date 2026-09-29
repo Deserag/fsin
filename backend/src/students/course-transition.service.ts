@@ -56,7 +56,7 @@ export class CourseTransitionService {
     const byTransition: Record<string, number> = {};
 
     for (const student of students) {
-      if (!student.currentCourse || !student.program) {
+      if (!student.currentCourse || !student.program?.maxCourse) {
         transitions.push({
           studentId: student.id,
           studentName: `${student.lastName} ${student.firstName}`,
@@ -241,6 +241,12 @@ export class CourseTransitionService {
       }
     }
 
+    // Keep the course selector in sync when the active group has advanced together.
+    const groups = await this.prisma.group.findMany({ where: { organizationId, isActive: true }, include: { students: { where: { isActive: true, status: { isTerminal: false, countsInAttendance: true } }, select: { currentCourse: true } } } });
+    for (const group of groups) {
+      const courses = [...new Set(group.students.map(s => s.currentCourse).filter((c): c is number => c !== null))];
+      if (courses.length === 1) await this.prisma.group.update({ where: { id: group.id }, data: { currentCourse: courses[0] } });
+    }
     // Audit log
     await this.prisma.auditLog.create({
       data: {

@@ -6,7 +6,7 @@ import { Paginated } from '../models/group.model';
 import { AdminUser } from '../models/admin.model';
 
 export interface CreateUserPayload {
-  email: string;
+  login: string;
   password: string;
   firstName: string;
   lastName: string;
@@ -14,10 +14,10 @@ export interface CreateUserPayload {
   phone?: string;
   roleIds: string[];
   groupScopeIds?: string[];
-  directionScopeIds?: string[];
+  programScopeIds?: string[];
 }
 
-export type UpdateUserPayload = Partial<Omit<CreateUserPayload, 'password' | 'email'>> & { isActive?: boolean };
+export type UpdateUserPayload = Partial<Omit<CreateUserPayload, 'password'>> & { isActive?: boolean };
 
 @Injectable({ providedIn: 'root' })
 export class UsersAdminService {

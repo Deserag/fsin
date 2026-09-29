@@ -1,3 +1,4 @@
+import { groupScope, assertGroup } from '../auth/scope.js';
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 
@@ -9,24 +10,13 @@ export class GroupsService {
     const { search, directionId, academicYearId, isActive, isArchived, page = 1, limit = 50 } = query;
     const skip = (page - 1) * limit;
 
-    let groupIds: string[] | undefined;
-    if (userContext.roles.includes('foreman')) {
-      groupIds = userContext.groupScopeIds;
-    } else if (userContext.roles.includes('manager') && !userContext.roles.includes('admin')) {
-      const dGroups = await this.prisma.group.findMany({
-        where: { organizationId, directionId: { in: userContext.directionScopeIds } },
-        select: { id: true },
-      });
-      groupIds = dGroups.map((g) => g.id);
-    }
-
     const where: any = {
-      organizationId,
-      ...(isActive !== undefined && { isActive }),
-      ...(isArchived !== undefined && { isArchived }),
+      ...groupScope(userContext),
+      ...(isActive !== undefined && { isActive: String(isActive) === 'true' }),
+      ...(isArchived !== undefined && { isArchived: String(isArchived) === 'true' }),
       ...(directionId && { directionId }),
       ...(academicYearId && { academicYearId }),
-      ...(groupIds && { id: { in: groupIds } }),
+
       ...(search && { name: { contains: search, mode: 'insensitive' } }),
     };
 
@@ -34,7 +24,7 @@ export class GroupsService {
       this.prisma.group.findMany({
         where,
         skip,
-        take: limit,
+        take: Number(limit),
         include: {
           direction: true,
           program: true,
@@ -54,7 +44,7 @@ export class GroupsService {
     return { data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 
-  async findOne(id: string, organizationId: string) {
+  async findOne(id: string, organizationId: string, userContext: any) {
     const group = await this.prisma.group.findFirst({
       where: { id, organizationId },
       include: {
@@ -74,10 +64,12 @@ export class GroupsService {
       },
     });
     if (!group) throw new NotFoundException('Группа не найдена');
+    assertGroup(group, userContext);
     return group;
   }
 
   async create(dto: any, organizationId: string, createdBy: string) {
+    if (dto.programId) { const program = await this.prisma.educationalProgram.findFirst({ where: { id: dto.programId, organizationId } }); if (!program) throw new BadRequestException('Образовательная программа не найдена'); dto.directionId = program.directionId; }
     const group = await this.prisma.$transaction(async (tx) => {
       const g = await tx.group.create({
         data: { ...dto, organizationId },
@@ -104,12 +96,28 @@ export class GroupsService {
     const existing = await this.prisma.group.findFirst({ where: { id, organizationId } });
     if (!existing) throw new NotFoundException('Группа не найдена');
 
+    if (dto.programId !== undefined) {
+      const program = await this.prisma.educationalProgram.findFirst({ where: { id: dto.programId, organizationId } });
+      if (!program) throw new BadRequestException('Образовательная программа не найдена');
+      dto.directionId = program.directionId;
+    }
+    if (dto.academicYearId !== undefined) {
+      const year = await this.prisma.academicYear.findFirst({ where: { id: dto.academicYearId, organizationId } });
+      if (!year) throw new BadRequestException('Учебный год не найден');
+    }
+
     const updated = await this.prisma.$transaction(async (tx) => {
       const g = await tx.group.update({
         where: { id },
         data: dto,
         include: { direction: true, program: true },
       });
+      if (dto.programId && dto.programId !== existing.programId) {
+        await tx.student.updateMany({
+          where: { currentGroupId: id, programId: existing.programId },
+          data: { programId: dto.programId },
+        });
+      }
 
       await tx.auditLog.create({
         data: {
@@ -118,8 +126,8 @@ export class GroupsService {
           action: 'UPDATE',
           entityType: 'Group',
           entityId: id,
-          oldValue: { name: existing.name, isActive: existing.isActive },
-          newValue: { name: g.name, isActive: g.isActive },
+          oldValue: { name: existing.name, programId: existing.programId, isActive: existing.isActive },
+          newValue: { name: g.name, programId: g.programId, isActive: g.isActive },
         },
       });
       return g;
@@ -167,9 +175,16 @@ export class GroupsService {
       });
     });
 
-    return { message: 'Старшина назначен', foremanId: userId };
+    return { message: 'Сотрудник УСП назначен', foremanId: userId };
   }
 
+  async restore(id: string, organizationId: string, userId: string) {
+    return this.prisma.$transaction(async tx => {
+      const group = await tx.group.update({ where: { id, organizationId }, data: { isArchived: false, isActive: true, archivedAt: null } });
+      await tx.auditLog.create({ data: { organizationId, userId, action: 'RESTORE', entityType: 'Group', entityId: id } });
+      return group;
+    });
+  }
   async archive(id: string, organizationId: string, archivedBy: string) {
     const group = await this.prisma.group.findFirst({ where: { id, organizationId } });
     if (!group) throw new NotFoundException('Группа не найдена');

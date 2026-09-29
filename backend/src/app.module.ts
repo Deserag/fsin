@@ -1,3 +1,5 @@
+import { APP_FILTER } from '@nestjs/core';
+import { PrismaExceptionFilter } from './prisma/prisma-exception.filter.js';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -20,6 +22,7 @@ import { OrganizationModule } from './organization/organization.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 
 @Module({
+  providers: [{ provide: APP_FILTER, useClass: PrismaExceptionFilter }],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,

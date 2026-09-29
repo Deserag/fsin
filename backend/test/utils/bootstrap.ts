@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import type { Server } from 'node:http';
-import { AppModule } from '../../src/app.module.js';
+import { AppModule } from '../../dist/app.module.js';
 
 export async function createTestApp(): Promise<INestApplication<Server>> {
   const moduleFixture = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -15,17 +15,17 @@ export async function createTestApp(): Promise<INestApplication<Server>> {
   return app;
 }
 
-export async function loginAs(app: INestApplication<Server>, email: string, password = 'Admin123!'): Promise<string> {
-  const res = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password });
+export async function loginAs(app: INestApplication<Server>, login: string, password = 'Admin123!'): Promise<string> {
+  const res = await request(app.getHttpServer()).post('/api/auth/login').send({ login, password });
   if (res.status !== 200) {
-    throw new Error(`Login failed for ${email}: ${res.status} ${JSON.stringify(res.body)}`);
+    throw new Error(`Login failed for ${login}: ${res.status} ${JSON.stringify(res.body)}`);
   }
   return res.body.accessToken as string;
 }
 
 export const DEMO_USERS = {
-  admin: 'admin@vifsin.ru',
-  manager: 'manager@vifsin.ru',
-  foreman1: 'foreman1@vifsin.ru',
-  foreman2: 'foreman2@vifsin.ru',
+  admin: 'admin',
+  manager: 'duty',
+  foreman1: 'usp1',
+  foreman2: 'usp2',
 };

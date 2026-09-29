@@ -5,3 +5,6 @@ dist/
 .env
 .DS_Store
 *.log
+
+# Local database verification copies and private snapshots
+backend/.verification/

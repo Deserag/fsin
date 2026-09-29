@@ -4,6 +4,7 @@ export interface Student {
   lastName: string;
   firstName: string;
   middleName?: string | null;
+  gender?: 'MALE' | 'FEMALE' | null;
   birthDate: string;
   enrollmentDate: string;
   graduationDate?: string | null;

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
@@ -6,7 +6,7 @@ import { UsersAdminService, CreateUserPayload } from '../../../core/services/use
 import { RolesAdminService } from '../../../core/services/roles-admin.service';
 import { GroupsService } from '../../../core/services/groups.service';
 import { ReferenceDataService } from '../../../core/services/reference-data.service';
-import { AdminUser, Direction, Role } from '../../../core/models/admin.model';
+import { AdminUser, EducationalProgram, Role } from '../../../core/models/admin.model';
 import { Group } from '../../../core/models/group.model';
 import { ToastService } from '../../../shared/services/toast.service';
 import { ConfirmService } from '../../../shared/services/confirm.service';
@@ -14,7 +14,7 @@ import { ModalComponent } from '../../../shared/components/modal/modal.component
 
 interface UserFormState {
   id: string | null;
-  email: string;
+  login: string;
   password: string;
   firstName: string;
   lastName: string;
@@ -22,13 +22,13 @@ interface UserFormState {
   phone: string;
   roleIds: string[];
   groupScopeIds: string[];
-  directionScopeIds: string[];
+  programScopeIds: string[];
 }
 
 function emptyForm(): UserFormState {
   return {
     id: null,
-    email: '',
+    login: '',
     password: '',
     firstName: '',
     lastName: '',
@@ -36,7 +36,7 @@ function emptyForm(): UserFormState {
     phone: '',
     roleIds: [],
     groupScopeIds: [],
-    directionScopeIds: [],
+    programScopeIds: [],
   };
 }
 
@@ -51,7 +51,11 @@ export class UsersAdminComponent implements OnInit {
   readonly users = signal<AdminUser[]>([]);
   readonly roles = signal<Role[]>([]);
   readonly groups = signal<Group[]>([]);
-  readonly directions = signal<Direction[]>([]);
+  readonly programs = signal<EducationalProgram[]>([]);
+  readonly groupSearch = signal('');
+  readonly programSearch = signal('');
+  readonly visibleGroups = computed(() => this.groups().filter(g => g.name.toLowerCase().includes(this.groupSearch().toLowerCase())));
+  readonly visiblePrograms = computed(() => this.programs().filter(p => `${p.code} ${p.name}`.toLowerCase().includes(this.programSearch().toLowerCase())));
   readonly loading = signal(true);
   readonly search = signal('');
 
@@ -78,13 +82,13 @@ export class UsersAdminComponent implements OnInit {
       users: this.usersService.list(this.search()),
       roles: this.rolesService.list(),
       groups: this.groupsService.list(),
-      directions: this.referenceData.directions(),
+      programs: this.referenceData.programs(),
     }).subscribe({
-      next: ({ users, roles, groups, directions }) => {
+      next: ({ users, roles, groups, programs }) => {
         this.users.set(users.data);
         this.roles.set(roles);
         this.groups.set(groups.data);
-        this.directions.set(directions);
+        this.programs.set(programs);
         this.loading.set(false);
       },
       error: () => {
@@ -101,13 +105,15 @@ export class UsersAdminComponent implements OnInit {
 
   openCreate(): void {
     this.form.set(emptyForm());
+    this.groupSearch.set(''); this.programSearch.set('');
     this.modalOpen.set(true);
   }
 
   openEdit(user: AdminUser): void {
+    this.groupSearch.set(''); this.programSearch.set('');
     this.form.set({
       id: user.id,
-      email: user.email,
+      login: user.login,
       password: '',
       firstName: user.firstName,
       lastName: user.lastName,
@@ -115,7 +121,7 @@ export class UsersAdminComponent implements OnInit {
       phone: user.phone ?? '',
       roleIds: user.roles.map((r) => r.role.id),
       groupScopeIds: user.groupScopes.map((g) => g.group.id),
-      directionScopeIds: user.directionScopes.map((d) => d.direction.id),
+      programScopeIds: user.programScopes.map((p) => p.program.id),
     });
     this.modalOpen.set(true);
   }
@@ -144,18 +150,18 @@ export class UsersAdminComponent implements OnInit {
     }));
   }
 
-  toggleDirectionScope(directionId: string): void {
+  toggleProgramScope(programId: string): void {
     this.form.update((f) => ({
       ...f,
-      directionScopeIds: f.directionScopeIds.includes(directionId)
-        ? f.directionScopeIds.filter((id) => id !== directionId)
-        : [...f.directionScopeIds, directionId],
+      programScopeIds: f.programScopeIds.includes(programId)
+        ? f.programScopeIds.filter((id) => id !== programId)
+        : [...f.programScopeIds, programId],
     }));
   }
 
   save(): void {
     const f = this.form();
-    if (!f.firstName || !f.lastName || (!f.id && (!f.email || !f.password))) {
+    if (!f.firstName || !f.lastName || (!f.id && (!f.login || !f.password))) {
       this.toast.error('Заполните обязательные поля');
       return;
     }
@@ -165,13 +171,14 @@ export class UsersAdminComponent implements OnInit {
     if (f.id) {
       this.usersService
         .update(f.id, {
+          login: f.login,
           firstName: f.firstName,
           lastName: f.lastName,
           middleName: f.middleName || undefined,
           phone: f.phone || undefined,
           roleIds: f.roleIds,
           groupScopeIds: f.groupScopeIds,
-          directionScopeIds: f.directionScopeIds,
+          programScopeIds: f.programScopeIds,
         })
         .subscribe({
           next: () => this.onSaved('Пользователь обновлён'),
@@ -179,7 +186,7 @@ export class UsersAdminComponent implements OnInit {
         });
     } else {
       const payload: CreateUserPayload = {
-        email: f.email,
+        login: f.login,
         password: f.password,
         firstName: f.firstName,
         lastName: f.lastName,
@@ -187,7 +194,7 @@ export class UsersAdminComponent implements OnInit {
         phone: f.phone || undefined,
         roleIds: f.roleIds,
         groupScopeIds: f.groupScopeIds,
-        directionScopeIds: f.directionScopeIds,
+        programScopeIds: f.programScopeIds,
       };
       this.usersService.create(payload).subscribe({
         next: () => this.onSaved('Пользователь создан'),

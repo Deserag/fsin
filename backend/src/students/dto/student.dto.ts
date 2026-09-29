@@ -7,6 +7,7 @@ import {
   Min,
   Max,
   IsUUID,
+  IsIn,
 } from 'class-validator';
 
 export class CreateStudentDto {
@@ -27,6 +28,8 @@ export class CreateStudentDto {
   @IsOptional()
   @IsString()
   middleName?: string;
+
+  @IsOptional() @IsIn(['MALE', 'FEMALE']) gender?: 'MALE' | 'FEMALE';
 
   @IsOptional()
   @IsDateString()
@@ -63,6 +66,7 @@ export class CreateStudentDto {
 }
 
 export class UpdateStudentDto {
+  @IsOptional() @IsDateString() effectiveDate?: string;
   @IsOptional()
   @IsString()
   internalId?: string;
@@ -78,6 +82,8 @@ export class UpdateStudentDto {
   @IsOptional()
   @IsString()
   middleName?: string;
+
+  @IsOptional() @IsIn(['MALE', 'FEMALE']) gender?: 'MALE' | 'FEMALE';
 
   @IsOptional()
   @IsDateString()

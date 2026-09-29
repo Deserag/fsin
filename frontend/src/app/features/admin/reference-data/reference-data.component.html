@@ -1,208 +1,34 @@
 <div class="reference-page page-fade-in">
-  <div class="page-header">
-    <h2>Справочники</h2>
-    <button type="button" class="btn btn-primary" (click)="openCreate()">+ Добавить</button>
-  </div>
-
-  <div class="tabs">
-    @for (tab of tabs; track tab.key) {
-      <button type="button" class="tab" [class.active]="activeTab() === tab.key" (click)="setTab(tab.key)">
-        {{ tab.label }}
-      </button>
-    }
-  </div>
-
-  @if (loading()) {
-    <div class="card skeleton" style="height: 320px"></div>
-  } @else {
-    <div class="card ref-table">
-      @switch (activeTab()) {
-        @case ('directions') {
-          <table>
-            <thead><tr><th>Код</th><th>Название</th><th>Кратко</th><th>Статус</th></tr></thead>
-            <tbody>
-              @for (d of directions(); track d.id) {
-                <tr class="row-fade-in">
-                  <td>{{ d.code }}</td><td>{{ d.name }}</td><td>{{ d.shortName }}</td>
-                  <td><span class="badge" [class.badge-success]="d.isActive" [class.badge-neutral]="!d.isActive">{{ d.isActive ? 'Активно' : 'Отключено' }}</span></td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-        @case ('programs') {
-          <table>
-            <thead><tr><th>Код</th><th>Название</th><th>Направление</th><th>Срок обучения</th></tr></thead>
-            <tbody>
-              @for (p of programs(); track p.id) {
-                <tr class="row-fade-in">
-                  <td>{{ p.code }}</td><td>{{ p.name }}</td><td>{{ p.direction?.name ?? directionName(p.directionId) }}</td><td>{{ p.durationYears }} лет</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-        @case ('academicYears') {
-          <table>
-            <thead><tr><th>Название</th><th>Начало</th><th>Конец</th><th>Текущий</th><th></th></tr></thead>
-            <tbody>
-              @for (y of academicYears(); track y.id) {
-                <tr class="row-fade-in">
-                  <td>{{ y.name }}</td><td>{{ y.startDate | date: 'dd.MM.yyyy' }}</td><td>{{ y.endDate | date: 'dd.MM.yyyy' }}</td>
-                  <td>@if (y.isCurrent) { <span class="badge badge-success">Текущий</span> }</td>
-                  <td>
-                    @if (!y.isCurrent) {
-                      <button type="button" class="btn btn-ghost" (click)="setCurrentYear(y.id)">Сделать текущим</button>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-        @case ('statuses') {
-          <table>
-            <thead><tr><th>Код</th><th>Название</th><th>Финальный</th></tr></thead>
-            <tbody>
-              @for (s of statuses(); track s.id) {
-                <tr class="row-fade-in">
-                  <td>{{ s.code }}</td><td>{{ s.name }}</td>
-                  <td>@if (s.isTerminal) { <span class="badge badge-warning">Да</span> } @else { — }</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-        @case ('periods') {
-          <table>
-            <thead><tr><th>Код</th><th>Название</th><th>Начало</th><th>Конец</th></tr></thead>
-            <tbody>
-              @for (p of periods(); track p.id) {
-                <tr class="row-fade-in">
-                  <td>{{ p.code }}</td><td>{{ p.name }}</td><td>{{ p.startTime }}</td><td>{{ p.endTime }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-        @case ('reasons') {
-          <table>
-            <thead><tr><th>Код</th><th>Название</th><th>Комментарий обязателен</th></tr></thead>
-            <tbody>
-              @for (r of reasons(); track r.id) {
-                <tr class="row-fade-in">
-                  <td>{{ r.code }}</td><td>{{ r.name }}</td>
-                  <td>@if (r.requiresNote) { <span class="badge badge-warning">Да</span> } @else { — }</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-        @case ('fields') {
-          <table>
-            <thead><tr><th>Порядок</th><th>Код</th><th>Название</th><th>Тип</th><th>Обязательное</th><th>Статус</th><th></th></tr></thead>
-            <tbody>
-              @for (f of fields(); track f.id; let i = $index) {
-                <tr class="row-fade-in">
-                  <td class="reorder-col">
-                    <button type="button" class="btn btn-ghost btn-icon" [disabled]="i === 0" (click)="moveField(f, -1)">↑</button>
-                    <button type="button" class="btn btn-ghost btn-icon" [disabled]="i === fields().length - 1" (click)="moveField(f, 1)">↓</button>
-                  </td>
-                  <td>{{ f.code }}</td>
-                  <td>{{ f.name }}</td>
-                  <td>{{ fieldTypeLabel(f.fieldType) }}</td>
-                  <td>
-                    <label class="checkbox-item">
-                      <input type="checkbox" [checked]="f.isRequired" (change)="toggleFieldRequired(f)" />
-                    </label>
-                  </td>
-                  <td>
-                    <span class="badge" [class.badge-success]="f.isActive" [class.badge-neutral]="!f.isActive">
-                      {{ f.isActive ? 'Активно' : 'Отключено' }}
-                    </span>
-                  </td>
-                  <td>
-                    <button type="button" class="btn btn-ghost" (click)="toggleFieldActive(f)">
-                      {{ f.isActive ? 'Отключить' : 'Включить' }}
-                    </button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-      }
-    </div>
-  }
+ <div class="page-header"><h2>Справочники</h2><button class="btn btn-primary" (click)="openCreate()">+ Добавить</button></div>
+ <div class="tabs">@for(tab of tabs;track tab.key){<button class="tab" [class.active]="activeTab()===tab.key" (click)="setTab(tab.key)">{{tab.label}}</button>}</div>
+ @if(loading()){<p>Загрузка…</p>}@else{
+ <div class="card ref-table"><table><thead><tr><th>Код / название</th><th>Описание</th><th>Статус</th><th>Действия</th></tr></thead><tbody>
+ @for(row of rows();track row.id){<tr><td>{{row.code}} {{row.name}}</td><td>
+ @if(activeTab()==='programs'){ {{row.shortName}} · {{row.durationYears ?? 'Срок не указан'}} @if(row.durationYears){лет} · {{row.educationForm}} }
+ @if(activeTab()==='academic-years'){ {{row.startDate|date:'dd.MM.yyyy'}} — {{row.endDate|date:'dd.MM.yyyy'}} @if(row.isCurrent){<span class="badge badge-success">Текущий</span>} }
+ @if(activeTab()==='settings/student-statuses'){ {{row.countsInAttendance && !row.isTerminal?'Учитывается в табеле':'Не включается в новые табели'}} }
+ @if(activeTab()==='settings/attendance-periods'){ {{row.startTime}} — {{row.endTime}} }
+ @if(activeTab()==='attendance-reasons'){ {{row.category==='IN_INSTITUTE'?'В институте':'Вне института'}} @if(row.requiresNote){· нужен комментарий} }
+ </td><td>{{row.isActive?'Активно':'Архив'}}</td><td>
+ <button class="btn btn-ghost" (click)="edit(row)">Изменить</button><button class="btn btn-ghost" (click)="toggle(row)">{{row.isActive?'Архивировать':'Восстановить'}}</button>
+ @if(activeTab()==='academic-years' && !row.isCurrent && row.isActive){<button class="btn btn-ghost" (click)="setCurrentYear(row.id)">Сделать текущим</button>}
+ @if(!row.isActive){<button class="btn btn-ghost" (click)="remove(row)">Удалить</button>}
+ </td></tr>}
+ </tbody></table></div>}
 </div>
-
-@if (modalOpen()) {
-  <app-modal title="Добавить запись" width="480px" (closed)="closeModal()">
-    <div class="ref-form">
-      @switch (activeTab()) {
-        @case ('directions') {
-          <div class="form-field"><label>Код *</label><input type="text" [ngModel]="form()['code']" (ngModelChange)="updateForm('code', $event)" /></div>
-          <div class="form-field"><label>Название *</label><input type="text" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
-          <div class="form-field"><label>Краткое название</label><input type="text" [ngModel]="form()['shortName']" (ngModelChange)="updateForm('shortName', $event)" /></div>
-        }
-        @case ('programs') {
-          <div class="form-field"><label>Код *</label><input type="text" [ngModel]="form()['code']" (ngModelChange)="updateForm('code', $event)" /></div>
-          <div class="form-field"><label>Название *</label><input type="text" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
-          <div class="form-field">
-            <label>Направление *</label>
-            <select [ngModel]="form()['directionId']" (ngModelChange)="updateForm('directionId', $event)">
-              <option [value]="null" disabled selected>Выберите…</option>
-              @for (d of directions(); track d.id) { <option [value]="d.id">{{ d.name }}</option> }
-            </select>
-          </div>
-          <div class="form-field"><label>Срок обучения (лет) *</label><input type="number" min="1" max="10" [ngModel]="form()['durationYears']" (ngModelChange)="updateForm('durationYears', $event)" /></div>
-        }
-        @case ('academicYears') {
-          <div class="form-field"><label>Название *</label><input type="text" placeholder="2026-2027" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
-          <div class="form-field"><label>Начало *</label><input type="date" [ngModel]="form()['startDate']" (ngModelChange)="updateForm('startDate', $event)" /></div>
-          <div class="form-field"><label>Конец *</label><input type="date" [ngModel]="form()['endDate']" (ngModelChange)="updateForm('endDate', $event)" /></div>
-        }
-        @case ('statuses') {
-          <div class="form-field"><label>Код *</label><input type="text" [ngModel]="form()['code']" (ngModelChange)="updateForm('code', $event)" /></div>
-          <div class="form-field"><label>Название *</label><input type="text" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
-          <label class="checkbox-item"><input type="checkbox" [ngModel]="form()['isTerminal']" (ngModelChange)="updateForm('isTerminal', $event)" /> Финальный статус (отчисление/выпуск)</label>
-        }
-        @case ('periods') {
-          <div class="form-field"><label>Код *</label><input type="text" [ngModel]="form()['code']" (ngModelChange)="updateForm('code', $event)" /></div>
-          <div class="form-field"><label>Название *</label><input type="text" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
-          <div class="form-field"><label>Начало</label><input type="time" [ngModel]="form()['startTime']" (ngModelChange)="updateForm('startTime', $event)" /></div>
-          <div class="form-field"><label>Конец</label><input type="time" [ngModel]="form()['endTime']" (ngModelChange)="updateForm('endTime', $event)" /></div>
-        }
-        @case ('reasons') {
-          <div class="form-field"><label>Код *</label><input type="text" [ngModel]="form()['code']" (ngModelChange)="updateForm('code', $event)" /></div>
-          <div class="form-field"><label>Название *</label><input type="text" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
-          <label class="checkbox-item"><input type="checkbox" [ngModel]="form()['requiresNote']" (ngModelChange)="updateForm('requiresNote', $event)" /> Требует комментария</label>
-        }
-        @case ('fields') {
-          <div class="form-field"><label>Код *</label><input type="text" [ngModel]="form()['code']" (ngModelChange)="updateForm('code', $event)" /></div>
-          <div class="form-field"><label>Название *</label><input type="text" [ngModel]="form()['name']" (ngModelChange)="updateForm('name', $event)" /></div>
-          <div class="form-field">
-            <label>Тип поля *</label>
-            <select [ngModel]="form()['fieldType']" (ngModelChange)="updateForm('fieldType', $event)">
-              @for (t of fieldTypes; track t.value) { <option [value]="t.value">{{ t.label }}</option> }
-            </select>
-          </div>
-          @if (form()['fieldType'] === 'SELECT' || form()['fieldType'] === 'MULTI_SELECT') {
-            <div class="form-field">
-              <label>Варианты (через запятую)</label>
-              <input type="text" [ngModel]="newFieldOptions()" (ngModelChange)="newFieldOptions.set($event)" placeholder="Вариант 1, Вариант 2" />
-            </div>
-          }
-          <label class="checkbox-item"><input type="checkbox" [ngModel]="form()['isRequired']" (ngModelChange)="updateForm('isRequired', $event)" /> Обязательное поле</label>
-        }
-      }
-
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" (click)="closeModal()">Отмена</button>
-        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
-          {{ saving() ? 'Сохранение…' : 'Сохранить' }}
-        </button>
-      </div>
-    </div>
-  </app-modal>
+@if(modalOpen()){
+ <app-modal [title]="form().id?'Изменить запись':'Добавить запись'" (closed)="modalOpen.set(false)"><div class="ref-form">
+ @if(activeTab()!=='academic-years'){<div class="form-field"><label>Код</label><input aria-label="Код" [ngModel]="form().code" (ngModelChange)="updateForm('code',$event)"></div>}
+ <div class="form-field"><label>Название</label><input aria-label="Название" [ngModel]="form().name" (ngModelChange)="updateForm('name',$event)"></div>
+ @if(activeTab()==='programs'){
+ <div class="form-field"><label>Сокращение</label><input aria-label="Сокращение" [ngModel]="form().shortName" (ngModelChange)="updateForm('shortName',$event)"></div>
+ <div class="form-field"><label>Срок обучения, лет</label><input aria-label="Срок обучения, лет" type="number" min="1" max="10" [ngModel]="form().durationYears" (ngModelChange)="updateForm('durationYears',$event)"></div>
+ <div class="form-field"><label>Форма обучения</label><input aria-label="Форма обучения" [ngModel]="form().educationForm" (ngModelChange)="updateForm('educationForm',$event)"></div>
+ <div class="form-field"><label>Специализация</label><input aria-label="Специализация" [ngModel]="form().specialization" (ngModelChange)="updateForm('specialization',$event)"></div>}
+ @if(activeTab()==='academic-years'){<div class="form-field"><label>Начало</label><input aria-label="Начало" type="date" [ngModel]="form().startDate" (ngModelChange)="updateForm('startDate',$event)"></div><div class="form-field"><label>Окончание</label><input aria-label="Окончание" type="date" [ngModel]="form().endDate" (ngModelChange)="updateForm('endDate',$event)"></div>}
+ @if(activeTab()==='settings/student-statuses'){<label><input type="checkbox" [ngModel]="form().isTerminal" (ngModelChange)="updateForm('isTerminal',$event)"> Обучение прекращено (отчисление, перевод или выпуск)</label><label><input type="checkbox" [ngModel]="form().countsInAttendance" (ngModelChange)="updateForm('countsInAttendance',$event)"> Включать в табель</label>}
+ @if(activeTab()==='settings/attendance-periods'){<div class="form-field"><label>Начало</label><input aria-label="Начало" type="time" [ngModel]="form().startTime" (ngModelChange)="updateForm('startTime',$event)"></div><div class="form-field"><label>Конец</label><input aria-label="Конец" type="time" [ngModel]="form().endTime" (ngModelChange)="updateForm('endTime',$event)"></div>}
+ @if(activeTab()==='attendance-reasons'){<div class="form-field"><label>Раздел табеля</label><select [ngModel]="form().category" (ngModelChange)="updateForm('category',$event)"><option value="IN_INSTITUTE">В институте</option><option value="OUTSIDE">Вне института</option></select></div><label class="checkbox-item"><input type="checkbox" [ngModel]="form().requiresNote" (ngModelChange)="updateForm('requiresNote',$event)"> Требует комментария</label>}
+ <div class="modal-actions"><button class="btn btn-secondary" (click)="modalOpen.set(false)">Отмена</button><button class="btn btn-primary" [disabled]="saving()" (click)="save()">Сохранить</button></div>
+ </div></app-modal>
 }

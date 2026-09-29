@@ -42,6 +42,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
         groupScopes: true,
         directionScopes: true,
+        programScopes: true,
       },
     });
 
@@ -55,6 +56,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     );
     const groupScopeIds = user.groupScopes.map((gs) => gs.groupId);
     const directionScopeIds = user.directionScopes.map((ds) => ds.directionId);
+    const programScopeIds = user.programScopes.map((ps) => ps.programId);
 
     return {
       id: user.id,
@@ -67,6 +69,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       permissions,
       groupScopeIds,
       directionScopeIds,
+      programScopeIds,
     };
   }
 }

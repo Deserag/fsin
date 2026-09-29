@@ -56,7 +56,7 @@ export class AuditLogComponent implements OnInit {
       SUBMIT: 'Отправка на проверку',
       CLOSE: 'Закрытие',
       ARCHIVE: 'Архивирование',
-      ASSIGN_FOREMAN: 'Назначение старшины',
+      ASSIGN_FOREMAN: 'Назначение сотрудника УСП',
       IMPORT: 'Импорт',
     };
     return map[action] ?? action;

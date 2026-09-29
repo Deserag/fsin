@@ -1,3 +1,4 @@
+import { groupScope, assertGroup } from '../auth/scope.js';
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateStudentDto, UpdateStudentDto, StudentQueryDto } from './dto/student.dto.js';
@@ -6,6 +7,14 @@ import { CreateStudentDto, UpdateStudentDto, StudentQueryDto } from './dto/stude
 export class StudentsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async validateReferences(dto: any, organizationId: string, user?: any) {
+    for (const [key, model] of [['statusId','studentStatus'],['programId','educationalProgram'],['academicYearId','academicYear'],['currentGroupId','group']]) {
+      if (!dto[key]) continue;
+      const item = await (this.prisma as any)[model].findFirst({ where: { id: dto[key], organizationId } });
+      if (!item) throw new BadRequestException('Справочная запись не принадлежит организации');
+      if (key === 'currentGroupId' && user) assertGroup(item,user);
+    }
+  }
   async findAll(organizationId: string, query: StudentQueryDto, userContext: any) {
     const {
       search, groupId, currentCourse, statusId, programId,
@@ -13,24 +22,6 @@ export class StudentsService {
     } = query;
 
     const skip = (page - 1) * limit;
-
-    // Scope check: non-admin users can only see students in their scope groups
-    let allowedGroupIds: string[] | undefined;
-    if (!userContext.roles.includes('admin') && !userContext.roles.includes('manager')) {
-      allowedGroupIds = userContext.groupScopeIds;
-    } else if (userContext.roles.includes('manager')) {
-      // Manager sees groups in their direction scope
-      if (userContext.directionScopeIds?.length > 0) {
-        const directionGroups = await this.prisma.group.findMany({
-          where: {
-            organizationId,
-            directionId: { in: userContext.directionScopeIds },
-          },
-          select: { id: true },
-        });
-        allowedGroupIds = directionGroups.map((g) => g.id);
-      }
-    }
 
     const where: any = {
       organizationId,
@@ -47,11 +38,8 @@ export class StudentsService {
       ...(programId && { programId }),
       ...(academicYearId && { academicYearId }),
       ...(currentCourse && { currentCourse }),
-      ...(groupId
-        ? { currentGroupId: groupId }
-        : allowedGroupIds?.length
-          ? { currentGroupId: { in: allowedGroupIds } }
-          : {}),
+      ...(groupId && { currentGroupId: groupId }),
+      ...(!userContext.roles.includes('admin') && { currentGroup: groupScope(userContext) }),
     };
 
     // Filter by direction through program
@@ -90,7 +78,7 @@ export class StudentsService {
     };
   }
 
-  async findOne(id: string, organizationId: string) {
+  async findOne(id: string, organizationId: string, user?: any) {
     const student = await this.prisma.student.findFirst({
       where: { id, organizationId },
       include: {
@@ -116,12 +104,14 @@ export class StudentsService {
     });
 
     if (!student) throw new NotFoundException('Студент не найден');
+    if (user && !user.roles.includes('admin')) { const group = await this.prisma.group.findUnique({ where: { id: student.currentGroupId ?? '' } }); assertGroup(group, user); }
     return student;
   }
 
-  async create(dto: CreateStudentDto, createdBy: string) {
+  async create(dto: CreateStudentDto, createdBy: string, user?: any) {
     const organizationId = dto.organizationId as string;
 
+    await this.validateReferences(dto, organizationId, user);
     // Check unique internal ID
     if (dto.internalId) {
       const existing = await this.prisma.student.findFirst({
@@ -140,6 +130,7 @@ export class StudentsService {
           lastName: dto.lastName,
           firstName: dto.firstName,
           middleName: dto.middleName,
+          gender: dto.gender,
           birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
           enrollmentDate: dto.enrollmentDate ? new Date(dto.enrollmentDate) : null,
           academicYearId: dto.academicYearId,
@@ -158,6 +149,7 @@ export class StudentsService {
           studentId: s.id,
           statusId: dto.statusId,
           changedBy: createdBy,
+          changeDate: dto.enrollmentDate ? new Date(dto.enrollmentDate) : new Date(),
           reason: 'Зачисление',
         },
       });
@@ -169,6 +161,7 @@ export class StudentsService {
             studentId: s.id,
             groupId: dto.currentGroupId,
             changedBy: createdBy,
+            joinDate: dto.enrollmentDate ? new Date(dto.enrollmentDate) : new Date(),
             reason: 'Зачисление в группу',
           },
         });
@@ -192,13 +185,17 @@ export class StudentsService {
     return student;
   }
 
-  async update(id: string, organizationId: string, dto: UpdateStudentDto, updatedBy: string) {
+  async update(id: string, organizationId: string, dto: UpdateStudentDto, updatedBy: string, user?: any) {
     const existing = await this.prisma.student.findFirst({
       where: { id, organizationId },
     });
     if (!existing) throw new NotFoundException('Студент не найден');
+    if (user) await this.findOne(id, organizationId, user);
+    await this.validateReferences(dto, organizationId, user);
 
+    const changeDate = dto.effectiveDate ? new Date(dto.effectiveDate) : new Date(new Date().toISOString().slice(0,10));
     const updated = await this.prisma.$transaction(async (tx) => {
+      if (dto.currentCourse !== undefined && dto.currentCourse !== existing.currentCourse) await tx.studentCourseHistory.create({ data: { studentId: id, fromCourse: existing.currentCourse, toCourse: dto.currentCourse, transitionDate: changeDate, changedBy: updatedBy, reason: 'Изменение курса' } });
       const s = await tx.student.update({
         where: { id },
         data: {
@@ -206,6 +203,7 @@ export class StudentsService {
           ...(dto.lastName && { lastName: dto.lastName }),
           ...(dto.firstName && { firstName: dto.firstName }),
           ...(dto.middleName !== undefined && { middleName: dto.middleName }),
+          ...(dto.gender !== undefined && { gender: dto.gender }),
           ...(dto.birthDate && { birthDate: new Date(dto.birthDate) }),
           ...(dto.enrollmentDate && { enrollmentDate: new Date(dto.enrollmentDate) }),
           ...(dto.graduationDate && { graduationDate: new Date(dto.graduationDate) }),
@@ -225,6 +223,7 @@ export class StudentsService {
             studentId: id,
             statusId: dto.statusId,
             changedBy: updatedBy,
+            changeDate,
             reason: 'Изменение статуса',
           },
         });
@@ -236,7 +235,7 @@ export class StudentsService {
         if (existing.currentGroupId) {
           await tx.studentGroupHistory.updateMany({
             where: { studentId: id, groupId: existing.currentGroupId, leaveDate: null },
-            data: { leaveDate: new Date() },
+            data: { leaveDate: changeDate },
           });
         }
 
@@ -246,6 +245,7 @@ export class StudentsService {
             studentId: id,
             groupId: dto.currentGroupId,
             changedBy: updatedBy,
+            joinDate: changeDate,
             reason: 'Перевод в группу',
           },
         });
@@ -264,18 +264,19 @@ export class StudentsService {
         },
       });
 
-      return s;
+      return tx.student.findUnique({ where: { id }, include: { status: true, program: true, currentGroup: { select: { id: true, name: true } } } });
     });
 
     return updated;
   }
 
-  async getHistory(id: string, organizationId: string) {
+  async getHistory(id: string, organizationId: string, user?: any) {
     const student = await this.prisma.student.findFirst({
       where: { id, organizationId },
     });
     if (!student) throw new NotFoundException('Студент не найден');
 
+    if (user) await this.findOne(id, organizationId, user);
     const [statusHistory, groupHistory, courseHistory] = await Promise.all([
       this.prisma.studentStatusHistory.findMany({
         where: { studentId: id },

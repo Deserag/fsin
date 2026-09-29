@@ -16,7 +16,8 @@ export interface Permission {
 
 export interface AdminUser {
   id: string;
-  email: string;
+  login: string;
+  email?: string | null;
   firstName: string;
   lastName: string;
   middleName?: string | null;
@@ -27,6 +28,7 @@ export interface AdminUser {
   roles: { role: { id: string; name: string; displayName: string } }[];
   groupScopes: { group: { id: string; name: string } }[];
   directionScopes: { direction: { id: string; name: string } }[];
+  programScopes: { program: { id: string; name: string; code: string } }[];
 }
 
 export interface Direction {
@@ -43,9 +45,9 @@ export interface EducationalProgram {
   code: string;
   name: string;
   shortName: string;
-  directionId: string;
-  durationYears: number;
-  maxCourse: number;
+  directionId: string | null;
+  durationYears: number | null;
+  maxCourse: number | null;
   isActive: boolean;
   direction?: { id: string; name: string };
 }

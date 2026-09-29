@@ -9,15 +9,15 @@ export class ExportsController {
   constructor(private readonly service: ExportsService) {}
 
   @Get('students')
-  async exportStudents(@Query() q: any, @CurrentUser('organizationId') o: string, @Res() res: any) {
-    const buffer = await this.service.exportStudents(o, q);
+  async exportStudents(@Query() q: any, @CurrentUser() u: any, @Res() res: any) {
+    const buffer = await this.service.exportStudents(u, q);
     res.set({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': 'attachment; filename="students.xlsx"' });
     res.send(buffer);
   }
 
   @Get('attendance')
-  async exportAttendance(@Query() q: any, @CurrentUser('organizationId') o: string, @Res() res: any) {
-    const buffer = await this.service.exportAttendance(o, q);
+  async exportAttendance(@Query() q: any, @CurrentUser() u: any, @Res() res: any) {
+    const buffer = await this.service.exportAttendance(u, q);
     res.set({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': 'attachment; filename="attendance.xlsx"' });
     res.send(buffer);
   }

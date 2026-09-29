@@ -10,8 +10,8 @@ const base = environment.apiUrl;
 export class GroupsService {
   constructor(private readonly http: HttpClient) {}
 
-  list(): Observable<Paginated<Group>> {
-    return this.http.get<Paginated<Group>>(`${base}/groups`);
+  list(params: Record<string,string> = {}): Observable<Paginated<Group>> {
+    return this.http.get<Paginated<Group>>(`${base}/groups`, {params: {limit: '500', ...params}});
   }
 
   get(id: string): Observable<Group> {
@@ -29,6 +29,8 @@ export class GroupsService {
   assignForeman(groupId: string, userId: string): Observable<unknown> {
     return this.http.post(`${base}/groups/${groupId}/foreman`, { userId });
   }
+
+  restore(id:string) { return this.http.patch(`${base}/groups/${id}/restore`, {}); }
 
   archive(id: string): Observable<unknown> {
     return this.http.patch(`${base}/groups/${id}/archive`, {});

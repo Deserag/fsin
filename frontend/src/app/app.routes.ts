@@ -13,10 +13,12 @@ export const routes: Routes = [
     loadComponent: () => import('./layouts/main-layout/main-layout.component').then((m) => m.MainLayoutComponent),
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'profile', loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent) },
       {
         path: 'dashboard',
         loadComponent: () => import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
       },
+      { path: 'attendance-review', loadComponent: () => import('./features/attendance-review/attendance-review.component').then(m => m.AttendanceReviewComponent) },
       {
         path: 'attendance',
         loadComponent: () => import('./features/attendance/attendance.component').then((m) => m.AttendanceComponent),

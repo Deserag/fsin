@@ -1,11 +1,12 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, shareReplay, finalize, throwError, catchError, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { CurrentUser, LoginResponse, RoleCode } from '../models/user.model';
 
 const TOKEN_KEY = 'fsin_access_token';
+const REFRESH_KEY = 'fsin_refresh_token';
 const USER_KEY = 'fsin_user';
 
 @Injectable({ providedIn: 'root' })
@@ -26,9 +27,10 @@ export class AuthService {
     return this.tokenSignal();
   }
 
-  login(email: string, password: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, { email, password }).pipe(
+  login(login: string, password: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, { login, password }).pipe(
       tap((res) => {
+        localStorage.setItem(REFRESH_KEY, res.refreshToken);
         localStorage.setItem(TOKEN_KEY, res.accessToken);
         localStorage.setItem(USER_KEY, JSON.stringify(res.user));
         this.tokenSignal.set(res.accessToken);
@@ -37,7 +39,41 @@ export class AuthService {
     );
   }
 
+  private refreshing?: Observable<{ accessToken: string; refreshToken: string }>;
+  refresh() {
+    if (this.refreshing) return this.refreshing;
+    const refreshToken = localStorage.getItem(REFRESH_KEY);
+    if (!refreshToken) return throwError(() => ({ status: 401 }));
+    this.refreshing = this.http.post<{ accessToken: string; refreshToken: string }>(`${environment.apiUrl}/auth/refresh`, { refreshToken }).pipe(
+      tap(res => { localStorage.setItem(TOKEN_KEY, res.accessToken); localStorage.setItem(REFRESH_KEY, res.refreshToken); this.tokenSignal.set(res.accessToken); }),
+      finalize(() => this.refreshing = undefined), shareReplay({ bufferSize: 1, refCount: false }));
+    return this.refreshing;
+  }
+  changePassword(currentPassword: string, newPassword: string) {
+    return this.http.post(`${environment.apiUrl}/auth/change-password`, { currentPassword, newPassword });
+  }
+  profile() {
+    return this.http.get<CurrentUser>(`${environment.apiUrl}/auth/profile`);
+  }
+  updateProfile(details: Pick<CurrentUser, 'firstName' | 'lastName' | 'middleName' | 'phone' | 'email'>) {
+    return this.http.patch<CurrentUser>(`${environment.apiUrl}/auth/profile`, details).pipe(
+      tap(user => {
+        const merged = { ...this.currentUserSignal(), ...user } as CurrentUser;
+        this.currentUserSignal.set(merged);
+        localStorage.setItem(USER_KEY, JSON.stringify(merged));
+      }),
+    );
+  }
   logout(): void {
+    const refreshToken = localStorage.getItem(REFRESH_KEY);
+    if (!refreshToken) { this.clearSession(); return; }
+    this.http.post(`${environment.apiUrl}/auth/logout`, {refreshToken}).pipe(
+      catchError(error => error.status === 401 ? this.refresh().pipe(switchMap(tokens => this.http.post(`${environment.apiUrl}/auth/logout`, {refreshToken: tokens.refreshToken}))) : throwError(() => error)),
+      finalize(() => this.clearSession()),
+    ).subscribe({error: () => {}});
+  }
+  clearSession(): void {
+    localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     this.tokenSignal.set(null);
@@ -46,7 +82,7 @@ export class AuthService {
   }
 
   hasPermission(permission: string): boolean {
-    return this.currentUserSignal()?.permissions.includes(permission) ?? false;
+    return this.isAdmin() || (this.currentUserSignal()?.permissions.includes(permission) ?? false);
   }
 
   private restoreUser(): CurrentUser | null {

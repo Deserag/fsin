@@ -1,0 +1,8 @@
+:host { display: block; max-width: 1400px; margin: 0 auto; }
+.card { padding: 20px; margin-top: 16px; overflow-x: auto; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+table { width: 100%; border-collapse: collapse; }
+td, th { padding: 12px; text-align: left; border-bottom: 1px solid var(--color-border); font-size: 13px; }
+th { color: var(--color-text-secondary); font-weight: 650; }
+input, select { min-height: 38px; padding: 8px 10px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-primary); font: inherit; }
+@media (max-width: 700px) { td, th { white-space: nowrap; } }

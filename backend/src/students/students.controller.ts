@@ -1,3 +1,4 @@
+import { RequirePermissions } from '../auth/decorators/permissions.decorator.js';
 import {
   Controller, Get, Post, Patch, Body, Param, Query, UseGuards,
 } from '@nestjs/common';
@@ -38,29 +39,30 @@ export class StudentsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser('organizationId') orgId: string) {
-    return this.studentsService.findOne(id, orgId);
+  findOne(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.studentsService.findOne(id, user.organizationId, user);
   }
 
   @Get(':id/history')
-  getHistory(@Param('id') id: string, @CurrentUser('organizationId') orgId: string) {
-    return this.studentsService.getHistory(id, orgId);
+  getHistory(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.studentsService.getHistory(id, user.organizationId, user);
   }
 
   @Post()
-  @Roles('admin', 'manager')
-  create(@Body() dto: CreateStudentDto, @CurrentUser('organizationId') orgId: string, @CurrentUser('id') userId: string) {
-    return this.studentsService.create({ ...dto, organizationId: orgId }, userId);
+  @RequirePermissions('STUDENTS_WRITE')
+  create(@Body() dto: CreateStudentDto, @CurrentUser('organizationId') orgId: string, @CurrentUser('id') userId: string, @CurrentUser() user: any) {
+    return this.studentsService.create({ ...dto, organizationId: orgId }, userId, user);
   }
 
   @Patch(':id')
-  @Roles('admin', 'manager')
+  @RequirePermissions('STUDENTS_WRITE')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateStudentDto,
     @CurrentUser('organizationId') orgId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser() user: any,
   ) {
-    return this.studentsService.update(id, orgId, dto, userId);
+    return this.studentsService.update(id, orgId, dto, userId, user);
   }
 }
